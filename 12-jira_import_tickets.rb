@@ -214,7 +214,7 @@ def create_ticket_jira(ticket, counter, total)
     warning('Ticket description length is greater than 32767 => truncate')
   end
 
-  # labels = get_labels(ticket)
+  labels = get_labels(ticket)
 
   milestone = get_milestone(ticket)
 
@@ -231,7 +231,8 @@ def create_ticket_jira(ticket, counter, total)
           # 'assignee': { 'name': assignee_name },
           'assignee': { 'id': jira_assignee_id },
           'priority': { 'name': priority_name },
-          # 'labels': labels,
+          # IMPORTANT: You might have to comment out the following line to get things working.
+          'labels': labels,
           'description': description,
 
           # IMPORTANT: The following custom fields MUST be on the create issue screen for this project
@@ -453,7 +454,8 @@ def create_ticket_jira(ticket, counter, total)
       reporter_name: reporter_name,
       priority_name: priority_name,
       status_name: status_name,
-      # labels: labels.join('|'),
+      # IMPORTANT: You might have to comment out the following line to get things working.
+      labels: labels.join('|'),
       description: description,
       assembla_ticket_id: ticket_id,
       assembla_ticket_number: ticket_number,
@@ -485,24 +487,24 @@ puts '  ----------              ---------                 --------'
 end
 
 # Make sure that the unknown user exists and is active, otherwise try and create
-puts "\nUnknown user: skip check!"
-# puts "\nUnknown user:"
-# if JIRA_API_UNKNOWN_USER && JIRA_API_UNKNOWN_USER.length
-#   user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
-#   if user
-#     goodbye("Please activate Jira unknown user '#{JIRA_API_UNKNOWN_USER}' (see README.md)") unless user['active']
-#     puts "Found Jira unknown user '#{JIRA_API_UNKNOWN_USER}' => OK"
-#   else
-#     user = {}
-#     user['login'] = JIRA_API_UNKNOWN_USER
-#     user['name'] = JIRA_API_UNKNOWN_USER
-#     result = jira_create_user(user)
-#     goodbye("Cannot find Jira unknown user '#{JIRA_API_UNKNOWN_USER}', make sure that has been created and enabled (see README.md).") unless result
-#     puts "Created Jira unknown user '#{JIRA_API_UNKNOWN_USER}'"
-#   end
-# else
-#   goodbye("Please define 'JIRA_API_UNKNOWN_USER' in the .env file (see README.md)")
-# end
+puts "\nUnknown user:"
+# IMPORTANT: You might have to comment out the following if-statement to get things working.
+if JIRA_API_UNKNOWN_USER && JIRA_API_UNKNOWN_USER.length
+  user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
+  if user
+    goodbye("Please activate Jira unknown user '#{JIRA_API_UNKNOWN_USER}' (see README.md)") unless user['active']
+    puts "Found Jira unknown user '#{JIRA_API_UNKNOWN_USER}' => OK"
+  else
+    user = {}
+    user['login'] = JIRA_API_UNKNOWN_USER
+    user['name'] = JIRA_API_UNKNOWN_USER
+    result = jira_create_user(user)
+    goodbye("Cannot find Jira unknown user '#{JIRA_API_UNKNOWN_USER}', make sure that has been created and enabled (see README.md).") unless result
+    puts "Created Jira unknown user '#{JIRA_API_UNKNOWN_USER}'"
+  end
+else
+  goodbye("Please define 'JIRA_API_UNKNOWN_USER' in the .env file (see README.md)")
+end
 
 # --- MILESTONES --- #
 
