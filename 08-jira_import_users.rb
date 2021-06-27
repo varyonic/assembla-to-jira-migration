@@ -26,12 +26,13 @@ goodbye('Cannot get users!') unless @users_assembla.length.nonzero?
 
 # name,key,accountId,emailAddress,displayName,active
 # @existing_users_jira = jira_get_users
-# name,key,accountId,displayName,active,accountType
+
+# accountId,displayName,active,accountType
 @existing_users_jira = jira_get_all_users
 
 puts "Existings users: #{@existing_users_jira.length}"
 @existing_users_jira.each do |u|
-  puts "name='#{u['name']}' key='#{u['key']}' accountId='#{u['accountId']}' displayName='#{u['displayName']}' active='#{u['active']}'"
+  puts "accountId='#{u['accountId']}' displayName='#{u['displayName']}' active='#{u['active']}' accountType='#{u['accountType']}'"
 end
 
 @users_jira = []

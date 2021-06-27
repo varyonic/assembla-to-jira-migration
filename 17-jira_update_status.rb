@@ -261,21 +261,23 @@ def jira_update_status(issue_id, assembla_status, counter)
     if assembla_status.casecmp('Done').zero? || assembla_status.casecmp('invalid').zero?
       resolution_name = assembla_status.casecmp('invalid').zero? ? "Won't do" : 'Done'
       resolution_id = @jira_resolution_name_to_id[resolution_name].to_i
-      payload = {
-        update: {},
-        fields: {
-          resolution: {
-            id: "#{resolution_id}"
+      unless resolution_id == '0'
+        payload = {
+          update: {},
+          fields: {
+            resolution: {
+              id: "#{resolution_id}"
+            }
           }
-        }
-      }.to_json
-      url = "#{URL_JIRA_ISSUES}/#{issue_id}?notifyUsers=false"
-      begin
-        RestClient::Request.execute(method: :put, url: url, payload: payload, headers: headers)
-      rescue RestClient::ExceptionWithResponse => e
-        rest_client_exception(e, 'PUT', url, payload)
-      rescue => e
-        puts "PUT #{url} resolution='#{resolution_name}' => NOK (#{e.message})"
+        }.to_json
+        url = "#{URL_JIRA_ISSUES}/#{issue_id}?notifyUsers=false"
+        begin
+          RestClient::Request.execute(method: :put, url: url, payload: payload, headers: headers)
+        rescue RestClient::ExceptionWithResponse => e
+          rest_client_exception(e, 'PUT', url, payload)
+        rescue => e
+          puts "PUT #{url} resolution='#{resolution_name}' => NOK (#{e.message})"
+        end
       end
     end
   end

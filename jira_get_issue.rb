@@ -24,7 +24,7 @@ def jira_get_issue_fields(issue_id, fields)
 end
 
 # DUMMY
-issue_id = 'OOPM-2695'
+issue_id = 'WFR-1191'
 
 results = jira_get_issue_fields(issue_id, fields)
 if results

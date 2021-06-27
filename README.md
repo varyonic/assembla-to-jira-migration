@@ -1521,9 +1521,9 @@ Wiki links
 #TICKET_NR => JIRA_TICKET_KEY
 [[image:IMAGE]] => !name(IMAGE)|thumbnail!
 [[image:IMAGE|text]] => !name(IMAGE)|thumbnail!
-@NAME => [~NAME]
-[[user:NAME]] => [~NAME]
-[[user:NAME|text]] => [~NAME]
+@NAME => [~accountid:id]
+[[user:NAME]] => [~accountid:id]
+[[user:NAME|text]] => [~accountid:id]
 @INLINE_CODE@ => {{INLINE_CODE}} (monospaced)
 <code>INLINE_CODE</code> => {{INLINE_CODE}} (monospaced)
 [[url:URL|TEXT]] => [TEXT|URL]

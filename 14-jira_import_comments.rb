@@ -71,33 +71,33 @@ end
 
 puts "Remaining: #{@comments_assembla.length}" if JIRA_API_SKIP_EMPTY_COMMENTS || JIRA_API_SKIP_COMMIT_COMMENTS
 
-# @users_jira => assemblaid,assemblaloginkey,accountid,name,emailaddress,displayname,active
+# @users_jira => assemblaId,assemblaLogin,emailAddress,accountId,accountType,emailAddress,displayName,active
 users_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-users.csv"
 @users_jira = csv_to_array(users_jira_csv)
 
 @user_id_to_login = {}
 @user_id_to_email = {}
 @assembla_login_to_jira_name = {}
-@assembla_id_to_jira_name = {}
+@a_user_id_to_j_user_name = {}
 @users_jira.each do |user|
   id = user['assemblaid']
-  login = user['name'].sub(/@.*$/, '')
+  login = user['assemblalogin'].sub(/@.*$/, '')
   email = user['emailaddress']
   if email.nil? || email.empty?
     email = "#{login}@#{JIRA_API_DEFAULT_EMAIL}"
   end
   @user_id_to_login[id] = login
   @user_id_to_email[id] = email
-  @assembla_id_to_jira_name[id] = user['name']
-  @assembla_login_to_jira_name[user['assemblalogin']] = user['name']
+  @a_user_id_to_j_user_name[id] = user['displayName']
+  @assembla_login_to_jira_name[user['assemblalogin']] = user['displayName']
 end
 
 # Convert assembla_ticket_id to jira_ticket_id and assembla_ticket_number to jira_ticket_key
-@assembla_id_to_jira_id = {}
-@assembla_id_to_jira_key = {}
+@a_ticket_id_to_j_issue_id = {}
+@a_ticket_id_to_j_issue_key = {}
 @tickets_jira.each do |ticket|
-  @assembla_id_to_jira_id[ticket['assembla_ticket_id']] = ticket['jira_ticket_id']
-  @assembla_id_to_jira_key[ticket['assembla_ticket_id']] = ticket['jira_ticket_key']
+  @a_ticket_id_to_j_issue_id[ticket['assembla_ticket_id']] = ticket['jira_ticket_id']
+  @a_ticket_id_to_j_issue_key[ticket['assembla_ticket_id']] = ticket['jira_ticket_key']
 end
 
 # Jira attachments (images)
@@ -119,7 +119,7 @@ if tickets_created_on
   puts "Filter newer than: #{tickets_created_on}"
   comments_initial = @comments_assembla.length
   # Only want comments which belong to remaining tickets
-  @comments_assembla.select! { |item| @assembla_id_to_jira_id[item['ticket_id']] }
+  @comments_assembla.select! { |item| @a_ticket_id_to_j_issue_id[item['ticket_id']] }
   puts "Comments: #{comments_initial} => #{@comments_assembla.length} ∆#{comments_initial - @comments_assembla.length}"
 end
 puts "Tickets: #{@tickets_jira.length}"
@@ -140,7 +140,7 @@ end
 def jira_create_comment(issue_id, user_id, comment, counter)
   result = nil
   url = "#{URL_JIRA_ISSUES}/#{issue_id}/comment"
-  user_login = @assembla_id_to_jira_name[user_id]
+  user_login = @a_user_id_to_j_user_name[user_id]
   if user_login
     user_email = @user_id_to_email[user_id]
   else
@@ -158,7 +158,7 @@ def jira_create_comment(issue_id, user_id, comment, counter)
                                        images: @list_of_images, content_type: 'comments', strikethru: true)
   body = "Created on #{date_time(comment['created_on'])}\n\n#{reformatted_body}"
   if JIRA_SERVER_TYPE == 'cloud'
-    author_link = user_login ? "[~#{user_login}]" : "unknown (#{user_id})"
+    author_link = user_login ? "[#{user_login}]" : "unknown (#{user_id})"
     body = "Author #{author_link} | #{body}"
   end
   body = "Assembla | #{body}"
@@ -194,8 +194,8 @@ def jira_create_comment(issue_id, user_id, comment, counter)
   if result && comment_comment != reformatted_body
     id = comment['id']
     ticket_id = comment['ticket_id']
-    issue_id = @assembla_id_to_jira_id[ticket_id]
-    issue_key = @assembla_id_to_jira_key[ticket_id]
+    issue_id = @a_ticket_id_to_j_issue_id[ticket_id]
+    issue_key = @a_ticket_id_to_j_issue_key[ticket_id]
     comment_id = result['id']
     comments_diff = {
         jira_comment_id: comment_id,
@@ -226,8 +226,8 @@ end
   counter = index + 1
   ticket_id = comment['ticket_id']
   user_id = comment['user_id']
-  issue_id = @assembla_id_to_jira_id[ticket_id]
-  issue_key = @assembla_id_to_jira_key[ticket_id]
+  issue_id = @a_ticket_id_to_j_issue_id[ticket_id]
+  issue_key = @a_ticket_id_to_j_issue_key[ticket_id]
   user_login = @user_id_to_login[user_id]
   body = comment['comment']
   if issue_id.nil? || issue_id.length.zero?

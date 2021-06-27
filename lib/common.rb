@@ -186,7 +186,7 @@ CUSTOM_FIELD_NAMES = [
     'Resolution',
     'Sprint',
     'Story Points',
-    'Time Tracking'
+    # 'Time Tracking'
 ].freeze
 
 JIRA_AGILE_HOST = "#{JIRA_API_BASE}/#{ENV['JIRA_AGILE_HOST']}"
@@ -686,8 +686,11 @@ end
 
 def jira_get_issue_types
   result = nil
+  # Only want issues types for current project
+  jira_project = jira_get_project_by_name(JIRA_API_PROJECT_NAME)
   begin
-    response = RestClient::Request.execute(method: :get, url: URL_JIRA_ISSUE_TYPES, headers: JIRA_HEADERS_ADMIN)
+    url = "#{URL_JIRA_ISSUE_TYPES}/project?projectId=#{jira_project['id']}"
+    response = RestClient::Request.execute(method: :get, url: url, headers: JIRA_HEADERS_ADMIN)
     result = JSON.parse(response)
     if result
       result.each do |r|
@@ -922,7 +925,7 @@ def markdown_name(name, logins)
   end
   return @cache_markdown_names[name] if @cache_markdown_names[name]
   jira_name = logins[name]
-  result = jira_name ? "[~#{jira_name}]" : "@#{name}"
+  result = jira_name ? "[#{jira_name}]" : "@#{name}"
   warning "Reformat markdown name='#{name}' => NOT FOUND" unless jira_name
   @cache_markdown_names[name] = result
 end

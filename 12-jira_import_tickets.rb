@@ -68,11 +68,18 @@ attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
   @list_of_images[attachment['assembla_attachment_id']] = attachment['filename']
 end
 
+@assembla_login_to_jira_id = {}
 @assembla_login_to_jira_name = {}
-@assembla_id_to_jira_name = {}
+@a_ticket_id_to_j_issue_id = {}
+@a_user_id_to_j_user_name = {}
+
+# user: assemblaid,assemblalogin,emailaddress,accountid,accounttype,displayname,active
 @jira_users.each do |user|
-  @assembla_login_to_jira_name[user['assemblalogin']] = user['name']
-  @assembla_id_to_jira_name[user['assemblaid']] = user['name']
+  @assembla_login_to_jira_id[user['assemblalogin']] = user['accountid']
+  # @assembla_login_to_jira_name[user['assemblalogin']] = user['name']
+  @assembla_login_to_jira_name[user['assemblalogin']] = user['displayname']
+  @a_ticket_id_to_j_issue_id[user['assemblaid']] = user['accountid']
+  @a_user_id_to_j_user_name[user['assemblaid']] = user['displayname']
 end
 
 puts "\nAttachments: #{@attachments_jira.length}"
@@ -170,12 +177,14 @@ def create_ticket_jira(ticket, counter, total)
   reporter_id = ticket['reporter_id']
   assigned_to_id = ticket['assigned_to_id']
   priority = ticket['priority']
-  reporter_name = @assembla_id_to_jira_name[reporter_id]
+  reporter_name = @a_user_id_to_j_user_name[reporter_id]
+  jira_reporter_id = @a_ticket_id_to_j_issue_id[reporter_id]
   if reporter_name.nil?
     reporter_name = JIRA_API_UNKNOWN_USER
   end
   if assigned_to_id
-    assignee_name = @assembla_id_to_jira_name[assigned_to_id]
+    assignee_name = @a_user_id_to_j_user_name[assigned_to_id]
+    jira_assignee_id = @a_ticket_id_to_j_issue_id[assigned_to_id]
   else
     assignee_name = nil
   end
@@ -192,7 +201,8 @@ def create_ticket_jira(ticket, counter, total)
   author_name = if @is_not_a_user.include?(reporter_name) || reporter_name == JIRA_API_UNKNOWN_USER
                   'unknown'
                 else
-                  "[~#{reporter_name}]"
+                  # "[~#{reporter_name}]"
+                  "[#{reporter_name}]"
                 end
   description += "Author #{author_name} | "
   description += "Created on #{date_time(created_on)}\n\n"
@@ -204,7 +214,7 @@ def create_ticket_jira(ticket, counter, total)
     warning('Ticket description length is greater than 32767 => truncate')
   end
 
-  labels = get_labels(ticket)
+  # labels = get_labels(ticket)
 
   milestone = get_milestone(ticket)
 
@@ -216,10 +226,12 @@ def create_ticket_jira(ticket, counter, total)
           'project': { 'id': project_id },
           'summary': summary,
           'issuetype': { 'id': issue_type[:id] },
-          'reporter': { 'name': reporter_name },
-          'assignee': { 'name': assignee_name },
+          # 'reporter': { 'name': reporter_name },
+          'reporter': { 'id': jira_reporter_id },
+          # 'assignee': { 'name': assignee_name },
+          'assignee': { 'id': jira_assignee_id },
           'priority': { 'name': priority_name },
-          'labels': labels,
+          # 'labels': labels,
           'description': description,
 
           # IMPORTANT: The following custom fields MUST be on the create issue screen for this project
@@ -297,7 +309,7 @@ def create_ticket_jira(ticket, counter, total)
         next
       end
     elsif type == 'Team List'
-      user_name = @assembla_id_to_jira_name[value]
+      user_name = @a_user_id_to_j_user_name[value]
       if user_name.nil?
         warning("Unknown assembla user='#{value}' for 'Team List' field title='#{k}' => SKIP")
       elsif @inactive_jira_users.include?(user_name)
@@ -317,7 +329,7 @@ def create_ticket_jira(ticket, counter, total)
     epic_name = (summary =~ /^epic: /i ? summary[6..-1] : summary)
     payload[:fields]["#{@customfield_name_to_id['Epic Name']}".to_sym] = epic_name
   when 'story'
-    payload[:fields]["#{@customfield_name_to_id['Story Points']}".to_sym] = story_points.to_i
+    payload[:fields]["#{@customfield_name_to_id['Story Points']}".to_sym] = story_points.to_i unless story_points == '0'
   when 'sub-task'
     parent_issue = get_parent_issue(ticket)
     unless parent_issue.nil?
@@ -441,7 +453,7 @@ def create_ticket_jira(ticket, counter, total)
       reporter_name: reporter_name,
       priority_name: priority_name,
       status_name: status_name,
-      labels: labels.join('|'),
+      # labels: labels.join('|'),
       description: description,
       assembla_ticket_id: ticket_id,
       assembla_ticket_number: ticket_number,
@@ -473,23 +485,24 @@ puts '  ----------              ---------                 --------'
 end
 
 # Make sure that the unknown user exists and is active, otherwise try and create
-puts "\nUnknown user:"
-if JIRA_API_UNKNOWN_USER && JIRA_API_UNKNOWN_USER.length
-  user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
-  if user
-    goodbye("Please activate Jira unknown user '#{JIRA_API_UNKNOWN_USER}' (see README.md)") unless user['active']
-    puts "Found Jira unknown user '#{JIRA_API_UNKNOWN_USER}' => OK"
-  else
-    user = {}
-    user['login'] = JIRA_API_UNKNOWN_USER
-    user['name'] = JIRA_API_UNKNOWN_USER
-    result = jira_create_user(user)
-    goodbye("Cannot find Jira unknown user '#{JIRA_API_UNKNOWN_USER}', make sure that has been created and enabled (see README.md).") unless result
-    puts "Created Jira unknown user '#{JIRA_API_UNKNOWN_USER}'"
-  end
-else
-  goodbye("Please define 'JIRA_API_UNKNOWN_USER' in the .env file (see README.md)")
-end
+puts "\nUnknown user: skip check!"
+# puts "\nUnknown user:"
+# if JIRA_API_UNKNOWN_USER && JIRA_API_UNKNOWN_USER.length
+#   user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
+#   if user
+#     goodbye("Please activate Jira unknown user '#{JIRA_API_UNKNOWN_USER}' (see README.md)") unless user['active']
+#     puts "Found Jira unknown user '#{JIRA_API_UNKNOWN_USER}' => OK"
+#   else
+#     user = {}
+#     user['login'] = JIRA_API_UNKNOWN_USER
+#     user['name'] = JIRA_API_UNKNOWN_USER
+#     result = jira_create_user(user)
+#     goodbye("Cannot find Jira unknown user '#{JIRA_API_UNKNOWN_USER}', make sure that has been created and enabled (see README.md).") unless result
+#     puts "Created Jira unknown user '#{JIRA_API_UNKNOWN_USER}'"
+#   end
+# else
+#   goodbye("Please define 'JIRA_API_UNKNOWN_USER' in the .env file (see README.md)")
+# end
 
 # --- MILESTONES --- #
 
@@ -629,7 +642,7 @@ end
 @tickets_assembla.each do |ticket|
   ticket_id = ticket['id']
   reporter_id = ticket['reporter_id']
-  jira_name = @assembla_id_to_jira_name[reporter_id]
+  jira_name = @a_user_id_to_j_user_name[reporter_id]
   unless jira_name
     @invalid_reporters << {
         ticket_id: ticket_id,

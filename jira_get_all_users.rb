@@ -4,7 +4,7 @@ load './lib/common.rb'
 
 load './lib/users-jira.rb'
 
-# name,key,accountId,emailAddress,displayName,active
+# accountId,displayName,active,accountType
 jira_get_all_users.each do |user|
   puts user.inspect
 end

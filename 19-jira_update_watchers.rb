@@ -36,27 +36,26 @@ puts "\nTotal Assembla tickets after: #{@total_assembla_tickets}"
 
 users_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-users.csv"
 
-# @jira_users => assemblaid,assemblalogin,key,accountid,name,emailaddress,displayname,active (downcase)
+# @jira_users => assemblaId,assemblaLogin,emailAddress,accountId,accountType,emailAddress,displayName,active
 @jira_users = csv_to_array(users_jira_csv)
 
-@assembla_id_to_jira_name = {}
-@jira_name_to_email = {}
+@a_user_id_to_j_user_id = {}
+@a_user_id_to_j_user_name = {}
 @jira_users.each do |user|
-  @assembla_id_to_jira_name[user['assemblaid']] = user['name']
-  @jira_name_to_email[user['name']] = user['emailaddress']
+  assembla_user_id = user['assemblaid']
+  @a_user_id_to_j_user_id[assembla_user_id] = user['accountid']
+  @a_user_id_to_j_user_name[assembla_user_id] = user['displayname']
 end
 
 # TODO
 # Move to common.rb -- start
 
-@a_id_to_j_id = {}
-@a_nr_to_j_key = {}
+@a_ticket_id_to_j_issue_id = {}
+@a_ticket_id_to_j_issue_key = {}
 @tickets_jira.each do |ticket|
   assembla_id = ticket['assembla_ticket_id']
-  jira_id = ticket['jira_ticket_id']
-  jira_key = ticket['jira_ticket_key']
-  @a_id_to_j_id[assembla_id] = jira_id
-  @a_nr_to_j_key[assembla_id] = jira_key
+  @a_ticket_id_to_j_issue_id[assembla_id] = ticket['jira_ticket_id']
+  @a_ticket_id_to_j_issue_key[assembla_id] = ticket['jira_ticket_key']
 end
 
 # Move to common.rb -- end
@@ -66,8 +65,6 @@ end
 # POST /rest/api/2/issue/{issueIdOrKey}/watchers
 def jira_update_watcher(issue_id, watcher, counter)
   result = nil
-  watcher_email = @jira_name_to_email[watcher]
-  # headers = headers_user_login(watcher, watcher_email)
   headers = JIRA_HEADERS_ADMIN
   url = "#{URL_JIRA_ISSUES}/#{issue_id}/watchers"
   payload = "\"#{watcher}\""
@@ -96,17 +93,17 @@ end
   assembla_ticket_id = ticket['id']
   assembla_ticket_nr = ticket['number']
   assembla_ticket_watchers = ticket['notification_list']
-  jira_ticket_id = @a_id_to_j_id[assembla_ticket_id]
+  jira_ticket_id = @a_ticket_id_to_j_issue_id[assembla_ticket_id]
   unless jira_ticket_id
     warning("Cannot find jira_ticket_id for assembla_ticket_id='#{assembla_ticket_id}'")
     next
   end
-  jira_ticket_key = @a_nr_to_j_key[assembla_ticket_nr]
+  jira_ticket_key = @a_ticket_id_to_j_issue_key[assembla_ticket_nr]
   assembla_ticket_watchers.split(',').each do |user_id|
     not_found = false
     result = nil?
     next unless user_id.length.positive?
-    watcher = @assembla_id_to_jira_name[user_id]
+    watcher = @a_user_id_to_j_user_id[user_id]
     unless watcher
       warning("Unknown watcher for user_id=#{user_id}, assembla_ticket_nr=#{assembla_ticket_nr}, jira_ticket_key=#{jira_ticket_key}")
       next

@@ -39,17 +39,34 @@ def jira_get_group(group_name)
   result.select { |user| !/^addon_/.match(user['name']) }
 end
 
-# name,key,accountId,displayName,active,accountType
+# accountId,displayName,active,accountType
 def jira_get_all_users
   users_jira = []
   JIRA_API_USER_GROUPS.split(',').each do |group|
     jira_get_group(group).each do |user|
-      unless users_jira.find { |u| u['name'] == user['name'] }
+      unless users_jira.find { |u| u['accountId'] == user['accountId'] }
         users_jira << user
       end
     end
   end
   users_jira
+end
+
+def jira_get_all_groups
+  result = []
+  url = "#{JIRA_API_HOST}/groups/picker?query=&maxResults=1000"
+  begin
+    response = RestClient::Request.execute(method: :get, url: url, headers: JIRA_HEADERS_ADMIN)
+    body = JSON.parse(response.body)
+    groups = body['groups']
+    puts "GET #{url} => OK (#{groups.length})"
+    groups.each do |group|
+      result << group
+    end
+  rescue => e
+    puts "GET #{url} => NOK (#{e.message})"
+  end
+  result
 end
 
 @jira_ignore_users = [
