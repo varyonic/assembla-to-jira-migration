@@ -454,8 +454,7 @@ def create_ticket_jira(ticket, counter, total)
       reporter_name: reporter_name,
       priority_name: priority_name,
       status_name: status_name,
-      # IMPORTANT: You might have to comment out the following line to get things working.
-      labels: labels.join('|'),
+      labels: (labels || []).join('|'),
       description: description,
       assembla_ticket_id: ticket_id,
       assembla_ticket_number: ticket_number,
