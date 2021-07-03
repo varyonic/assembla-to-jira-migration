@@ -1577,8 +1577,8 @@ gsub(/\[\[url:(.*?)\|(.*?)\]\]/i, '[\2|\1]').
 gsub(/\[\[url:(.*?)\]\]/i, '[\1|\1]').
 gsub(/<code>(.*?)<\/code>/i,'{{\1}}').
 gsub(/@([^@]*)@( |$)/, '{{\1}}\2').
-gsub(/@([a-z.-_]*)/i) { |name| markdown_name(name, logins) }.
-gsub(/\[\[user:(.*?)(\|(.*?))?\]\]/i) { |name| markdown_name(name, logins) }.
+gsub(/@([a-z.-_]*)/i) { |name| markdown_name(name, user_ids) }.
+gsub(/\[\[user:(.*?)(\|(.*?))?\]\]/i) { |name| markdown_name(name, user_ids) }.
 gsub(/\[\[image:(.*?)(\|(.*?))?\]\]/i) { |image| markdown_image(image, images, content_type) }
 ```
 

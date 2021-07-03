@@ -70,7 +70,7 @@ end
 
 @assembla_login_to_jira_id = {}
 @assembla_login_to_jira_name = {}
-@a_ticket_id_to_j_issue_id = {}
+@a_user_id_to_j_issue_id = {}
 @a_user_id_to_j_user_name = {}
 
 # user: assemblaid,assemblalogin,emailaddress,accountid,accounttype,displayname,active
@@ -78,7 +78,7 @@ end
   @assembla_login_to_jira_id[user['assemblalogin']] = user['accountid']
   # @assembla_login_to_jira_name[user['assemblalogin']] = user['name']
   @assembla_login_to_jira_name[user['assemblalogin']] = user['displayname']
-  @a_ticket_id_to_j_issue_id[user['assemblaid']] = user['accountid']
+  @a_user_id_to_j_issue_id[user['assemblaid']] = user['accountid']
   @a_user_id_to_j_user_name[user['assemblaid']] = user['displayname']
 end
 
@@ -171,20 +171,20 @@ def create_ticket_jira(ticket, counter, total)
   project_id = @project['id']
   ticket_id = ticket['id']
   ticket_number = ticket['number']
-  summary = reformat_markdown(ticket['summary'], logins: @assembla_login_to_jira_name, images: @list_of_images, content_type: 'summary', tickets: @assembla_number_to_jira_key)
+  summary = reformat_markdown(ticket['summary'], user_ids: @assembla_login_to_jira_id, images: @list_of_images, content_type: 'summary', tickets: @assembla_number_to_jira_key)
   created_on = ticket['created_on']
   completed_date = date_format_yyyy_mm_dd(ticket['completed_date'])
   reporter_id = ticket['reporter_id']
   assigned_to_id = ticket['assigned_to_id']
   priority = ticket['priority']
   reporter_name = @a_user_id_to_j_user_name[reporter_id]
-  jira_reporter_id = @a_ticket_id_to_j_issue_id[reporter_id]
+  jira_reporter_id = @a_user_id_to_j_issue_id[reporter_id]
   if reporter_name.nil?
     reporter_name = JIRA_API_UNKNOWN_USER
   end
   if assigned_to_id
     assignee_name = @a_user_id_to_j_user_name[assigned_to_id]
-    jira_assignee_id = @a_ticket_id_to_j_issue_id[assigned_to_id]
+    jira_assignee_id = @a_user_id_to_j_issue_id[assigned_to_id]
   else
     assignee_name = nil
   end
@@ -202,11 +202,11 @@ def create_ticket_jira(ticket, counter, total)
                   'unknown'
                 else
                   # "[~#{reporter_name}]"
-                  "[#{reporter_name}]"
+                  "[~accountid:#{reporter_name}]"
                 end
   description += "Author #{author_name} | "
   description += "Created on #{date_time(created_on)}\n\n"
-  reformatted_description = "#{reformat_markdown(ticket['description'], logins: @assembla_login_to_jira_name, images: @list_of_images, content_type: 'description', tickets: @assembla_number_to_jira_key)}"
+  reformatted_description = "#{reformat_markdown(ticket['description'], user_ids: @assembla_login_to_jira_id, images: @list_of_images, content_type: 'description', tickets: @assembla_number_to_jira_key)}"
   description += reformatted_description
 
   if description.length > 32767

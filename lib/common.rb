@@ -912,7 +912,7 @@ end
 
 @cache_markdown_names = {}
 
-def markdown_name(name, logins)
+def markdown_name(name, user_ids)
   if name[0] == '@'
     # Regex isn't perfect, catch email addresses and names that
     # begin with a digit, just in case.
@@ -925,9 +925,9 @@ def markdown_name(name, logins)
     goodbye("markdown_name(name='#{name}') has unknown format")
   end
   return @cache_markdown_names[name] if @cache_markdown_names[name]
-  jira_name = logins[name]
-  result = jira_name ? "[#{jira_name}]" : "@#{name}"
-  warning "Reformat markdown name='#{name}' => NOT FOUND" unless jira_name
+  user_id = user_ids[name]
+  result = user_id ? "[~accountid:#{user_id}]" : "[#{name}]"
+  warning "Reformat markdown name='#{name}' => NOT FOUND" unless user_id
   @cache_markdown_names[name] = result
 end
 
@@ -972,7 +972,7 @@ end
 
 def reformat_markdown(content, opts = {})
   return content if content.nil? || content.length.zero?
-  logins = opts[:logins]
+  user_ids = opts[:user_ids]
   images = opts[:images]
   content_type = opts[:content_type]
   tickets = opts[:tickets]
@@ -992,8 +992,8 @@ def reformat_markdown(content, opts = {})
         gsub(/\[\[url:(.*?)\]\]/i, '[\1|\1]').
         gsub(/<code>(.*?)<\/code>/i, '{{\1}}').
         gsub(/@([^@]*)@( |$)/, '{{\1}}\2').
-        gsub(/@([a-z._-]*)/i) { |name| markdown_name(name, logins) }.
-        gsub(/\[\[user:(.*?)(\|(.*?))?\]\]/i) { |name| markdown_name(name, logins) }.
+        gsub(/@([a-z._-]*)/i) { |name| markdown_name(name, user_ids) }.
+        gsub(/\[\[user:(.*?)(\|(.*?))?\]\]/i) { |name| markdown_name(name, user_ids) }.
         gsub(/\[\[image:(.*?)(\|(.*?))?\]\]/i) { |image| markdown_image(image, images, content_type) }
   end
   markdown.join("\n")

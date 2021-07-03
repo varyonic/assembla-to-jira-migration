@@ -77,8 +77,10 @@ users_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-users.csv"
 
 @user_id_to_login = {}
 @user_id_to_email = {}
+@assembla_login_to_jira_id = {}
 @assembla_login_to_jira_name = {}
 @a_user_id_to_j_user_name = {}
+@a_user_id_to_j_user_id = {}
 @users_jira.each do |user|
   id = user['assemblaid']
   login = user['assemblalogin'].sub(/@.*$/, '')
@@ -88,8 +90,10 @@ users_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-users.csv"
   end
   @user_id_to_login[id] = login
   @user_id_to_email[id] = email
-  @a_user_id_to_j_user_name[id] = user['displayName']
-  @assembla_login_to_jira_name[user['assemblalogin']] = user['displayName']
+  @a_user_id_to_j_user_name[id] = user['displayname']
+  @a_user_id_to_j_user_id[id] = user['accountid']
+  @assembla_login_to_jira_id[user['assemblalogin']] = user['accountid']
+  @assembla_login_to_jira_name[user['assemblalogin']] = user['displayname']
 end
 
 # Convert assembla_ticket_id to jira_ticket_id and assembla_ticket_number to jira_ticket_key
@@ -141,6 +145,7 @@ def jira_create_comment(issue_id, user_id, comment, counter)
   result = nil
   url = "#{URL_JIRA_ISSUES}/#{issue_id}/comment"
   user_login = @a_user_id_to_j_user_name[user_id]
+  user_id = @a_user_id_to_j_user_id[user_id]
   if user_login
     user_email = @user_id_to_email[user_id]
   else
@@ -154,11 +159,11 @@ def jira_create_comment(issue_id, user_id, comment, counter)
                     else
                       comment['comment']
                     end
-  reformatted_body = reformat_markdown(comment_comment, logins: @assembla_login_to_jira_name,
+  reformatted_body = reformat_markdown(comment_comment, user_ids: @assembla_login_to_jira_id,
                                        images: @list_of_images, content_type: 'comments', strikethru: true)
   body = "Created on #{date_time(comment['created_on'])}\n\n#{reformatted_body}"
   if JIRA_SERVER_TYPE == 'cloud'
-    author_link = user_login ? "[#{user_login}]" : "unknown (#{user_id})"
+    author_link = user_id ? "[~accountid:#{user_id}]" : "unknown (#{user_id})"
     body = "Author #{author_link} | #{body}"
   end
   body = "Assembla | #{body}"
