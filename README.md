@@ -186,10 +186,10 @@ TICKETS_CREATED_ON=YYYY-MM-DD
 DEBUG=false
 
 # --- Assembla settings --- #
-ASSEMBLA_API_HOST=https://api.assembla.com/v1
+ASSEMBLA_API_HOST=https://[eu-]api.assembla.com/v1
 ASSEMBLA_API_KEY=api-key
 ASSEMBLA_API_SECRET=api-secret
-ASSEMBLA_URL_TICKETS=https://app.assembla.com/spaces/[:space-name]/tickets
+ASSEMBLA_URL_TICKETS=https://[eu-]app.assembla.com/spaces/[:space-name]/tickets
 ASSEMBLA_SPACE=[:space-name]
 ASSEMBLA_WIKI=https://[:company-name].assembla.com/spaces/[:space-name]/wiki
 ASSEMBLA_WIKI_NAME=[:space-name]
