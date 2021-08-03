@@ -7,17 +7,18 @@ load './lib/users-jira.rb'
 # IMPORTANT: Make sure that the `JIRA_API_ADMIN_USER` exists, is activated and belongs to both
 # the `site-admins` and the `jira-administrators` groups.
 #
+# accountId,displayName,active,accountType
 @jira_administrators = jira_get_group('jira-administrators')
-admin_administrator = @jira_administrators.detect { |user| user['emailAddress'] == JIRA_API_ADMIN_EMAIL }
+admin_administrator = @jira_administrators.detect { |user| user['accountId'] == JIRA_API_ADMIN_ACCOUNT_ID }
 
 @jira_site_admins = jira_get_group('site-admins')
-admin_site_admin = @jira_site_admins.detect { |user| user['emailAddress'] == JIRA_API_ADMIN_EMAIL }
+admin_site_admin = @jira_site_admins.detect { |user| user['accountId'] == JIRA_API_ADMIN_ACCOUNT_ID }
 
 # You may have to uncomment out the following line to get things working
-goodbye("Admin user with JIRA_API_ADMIN_EMAIL='#{JIRA_API_ADMIN_EMAIL}' does NOT exist or does NOT belong to both the 'jira-administrators' and the 'site-admins' groups.") unless admin_site_admin && admin_administrator
+goodbye("Admin user with JIRA_API_ADMIN_ACCOUNT_ID='#{JIRA_API_ADMIN_ACCOUNT_ID}' does NOT exist or does NOT belong to both the 'jira-administrators' and the 'site-admins' groups.") unless admin_site_admin && admin_administrator
 
 # You may have to uncomment out the following line to get things working
-goodbye("Admin user with JIRA_API_ADMIN_EMAIL='#{JIRA_API_ADMIN_EMAIL}' is NOT active, please activate user.") unless admin_site_admin['active'] && admin_administrator['active']
+goodbye("Admin user with JIRA_API_ADMIN_ACCOUNT_ID='#{JIRA_API_ADMIN_ACCOUNT_ID}' is NOT active, please activate user.") unless admin_site_admin['active'] && admin_administrator['active']
 
 # @user_assembla => count,id,login,name,picture,email,organization,phone,...
 users_assembla_csv = "#{OUTPUT_DIR_ASSEMBLA}/report-users.csv"

@@ -212,8 +212,9 @@ JIRA_API_PROJECT_TYPE=scrum
 JIRA_API_ADMIN_USER=john.doe
 JIRA_API_ADMIN_PASSWORD=secret
 JIRA_API_ADMIN_EMAIL=john.doe@example.org
-# You will need an account id for the project lead when creating a new project.
-# To get a list of known Jira users, execute `ruby jira_get_all_users.rb`
+# You will need account ids for the admin and project lead when creating a new project. They can be
+# one and the same person. To generate a list of known Jira users, execute `ruby jira_get_all_users.rb`
+JIRA_API_ADMIN_ACCOUNT_ID=account-id
 JIRA_API_LEAD_ACCOUNT_ID=account-id
 JIRA_API_UNKNOWN_USER=unknown.user
 JIRA_API_DEFAULT_EMAIL=example.org
