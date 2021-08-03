@@ -44,6 +44,7 @@ JIRA_API_KEY = ENV['JIRA_API_KEY'].freeze
 JIRA_API_ADMIN_EMAIL = ENV['JIRA_API_ADMIN_EMAIL'].freeze
 JIRA_API_DEFAULT_EMAIL = (ENV['JIRA_API_DEFAULT_EMAIL'] || 'example.org').gsub(/^@/, '').freeze
 JIRA_API_UNKNOWN_USER = ENV['JIRA_API_UNKNOWN_USER'].freeze
+JIRA_API_LEAD_ACCOUNT_ID = ENV['JIRA_API_LEAD_ACCOUNT_ID'].freeze
 
 JIRA_API_IMAGES_THUMBNAIL = (ENV['JIRA_API_IMAGES_THUMBNAIL'] || 'description:false,comments:true').freeze
 JIRA_API_USER_GROUPS = (ENV['JIRA_API_USER_GROUPS'] || 'administrators,jira-administrators,jira-core-users,site-admins,jira-software-users').freeze
@@ -170,6 +171,8 @@ end
 # The following custom fields MUST be defined AND associated with the proper screens
 CUSTOM_FIELD_NAMES = [
     'Assembla-Id',
+    'Assembla-Created-On',
+    'Assembla-Due-Date',
     'Assembla-Milestone',
     'Assembla-Status',
     'Assembla-Reporter',
@@ -296,6 +299,12 @@ def date_format_yyyy_mm_dd(dt)
   month = format('%02d', date.month)
   day = format('%02d', date.day)
   "#{year}-#{month}-#{day}"
+end
+
+def date_format_datetime(dt)
+  # Converts 'yyyy-mm-ddThh:mm:ss.000Z' to 'yyyy-mm-dd hh:mm:ss'
+  return dt unless dt.is_a?(String) && dt.length.positive?
+  dt.sub(/\.[^.]*$/, '').tr('T', ' ')
 end
 
 def date_time(dt)
@@ -438,7 +447,8 @@ end
 def jira_check_unknown_user(b)
   puts "\nUnknown user:" if b
   if JIRA_API_UNKNOWN_USER && JIRA_API_UNKNOWN_USER.length
-    user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
+    # user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
+    user = jira_get_user(JIRA_API_LEAD_ACCOUNT_ID, false)
     if user
       goodbye("Please activate Jira unknown user '#{JIRA_API_UNKNOWN_USER}'") unless user['active']
     else
@@ -513,6 +523,7 @@ end
 #end
 
 def jira_get_user_account_id(username)
+  return JIRA_API_LEAD_ACCOUNT_ID unless JIRA_API_LEAD_ACCOUNT_ID.nil?
   result = nil
   account_id = nil
   url = "#{URL_JIRA_USER_ACCOUNT_ID}?username=#{username}"
@@ -799,9 +810,9 @@ def jira_create_user(user)
   result
 end
 
-def jira_get_user(username, groups)
+def jira_get_user(accountId, groups)
   result = nil
-  url = "#{JIRA_API_HOST}/user?username=#{username}"
+  url = "#{JIRA_API_HOST}/user?accountId=#{accountId}"
   url += '&expand=groups' if groups
   begin
     response = RestClient::Request.execute(method: :get, url: url, headers: JIRA_HEADERS_ADMIN)
@@ -831,7 +842,6 @@ def jira_delete_user(user)
     puts "DELETE #{url} account_id='#{account_id}' display_name='#{display_name}' active='#{active}' => NOK (#{e.inspect})"
   end
 end
-
 
 def jira_get_group(group)
   result = nil

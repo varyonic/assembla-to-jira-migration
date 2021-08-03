@@ -51,8 +51,8 @@ end
   username = user['login'].sub(/@.*$/, '')
   email = user['email']
   if email.nil? || email.length.zero?
-    puts "username='#{username}' does NOT have a valid email => SKIP"
-    next
+    email = "#{JIRA_API_UNKNOWN_USER}#{JIRA_API_DEFAULT_EMAIL}"
+    puts "username='#{username}' does NOT have a valid email, changed to '#{email}'"
   end
   u1 = jira_get_user_by_username(@existing_users_jira, username)
   # u1 = jira_get_user_by_email(@existing_users_jira, email)

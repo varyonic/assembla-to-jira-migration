@@ -81,6 +81,13 @@ puts "SKIP to ticket #{@startAt}" if @startAt > 1
   @completed = @completed + 1
 
   url = attachment['url']
+
+  # BUGFIX Assembla. Even if we have defined ASSEMBLA_API_HOST=https://eu-api.assembla.com/v1, this url will still be
+  # https://api.assembla.com/v1 which is wrong, need to correct.
+  unless url.match?(/^#{ASSEMBLA_API_HOST}/)
+    url = url.sub('https://api.assembla.com/v1', ASSEMBLA_API_HOST)
+  end
+
   id = attachment['id']
   created_at = attachment['created_at']
   created_by = @assembla_id_to_login[attachment['created_by']]
@@ -126,6 +133,3 @@ end
 
 puts "Total all: #{@attachments_total}"
 puts attachments_jira_csv
-
-# attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
-# write_csv_file(attachments_jira_csv, @jira_attachments)

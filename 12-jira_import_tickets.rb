@@ -61,7 +61,7 @@ attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
 # @jira_users => assemblaid,assemblalogin,key,accountid,name,emailaddress,displayname,active (downcase)
 @jira_users = csv_to_array(users_jira_csv)
 @issue_types_jira = csv_to_array(issue_types_jira_csv)
-@attachments_jira = csv_to_array(attachments_jira_csv)
+@attachments_jira = File.exist?(attachments_jira_csv) ? csv_to_array(attachments_jira_csv) : []
 
 @list_of_images = {}
 @attachments_jira.each do |attachment|
@@ -173,7 +173,8 @@ def create_ticket_jira(ticket, counter, total)
   ticket_number = ticket['number']
   summary = reformat_markdown(ticket['summary'], user_ids: @assembla_login_to_jira_id, images: @list_of_images, content_type: 'summary', tickets: @assembla_number_to_jira_key)
   created_on = ticket['created_on']
-  completed_date = date_format_yyyy_mm_dd(ticket['completed_date'])
+  completed_date = ticket['completed_date']
+  due_date = ticket['due_date']
   reporter_id = ticket['reporter_id']
   assigned_to_id = ticket['assigned_to_id']
   priority = ticket['priority']
@@ -240,11 +241,13 @@ def create_ticket_jira(ticket, counter, total)
           # Assembla
 
           "#{@customfield_name_to_id['Assembla-Id']}": ticket_number,
+          "#{@customfield_name_to_id['Assembla-Created-On']}": date_format_datetime(created_on),
+          "#{@customfield_name_to_id['Assembla-Due-Date']}": date_format_datetime(due_date),
           "#{@customfield_name_to_id['Assembla-Reporter']}": reporter_name,
           "#{@customfield_name_to_id['Assembla-Assignee']}": assignee_name,
           "#{@customfield_name_to_id['Assembla-Status']}": status_name,
           "#{@customfield_name_to_id['Assembla-Milestone']}": @nr_milestones.nonzero? ? milestone[:name] : nil,
-          "#{@customfield_name_to_id['Assembla-Completed']}": completed_date
+          "#{@customfield_name_to_id['Assembla-Completed']}": date_format_datetime(completed_date)
       }
   }
 
@@ -269,10 +272,12 @@ def create_ticket_jira(ticket, counter, total)
   # Reporter is required
   if @is_not_a_user.include?(reporter_name)
     warning("Reporter name='#{reporter_name}' is not a user => RESET '#{JIRA_API_UNKNOWN_USER}'")
-    payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
+    # payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
+    payload[:fields][:reporter][:accountId] = JIRA_API_LEAD_ACCOUNT_ID
   elsif @inactive_jira_users.include?(reporter_name)
     warning("Reporter name='#{reporter_name}' is inactive => RESET '#{JIRA_API_UNKNOWN_USER}'")
-    payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
+    # payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
+    payload[:fields][:reporter][:accountId] = JIRA_API_LEAD_ACCOUNT_ID
   end
 
   # Verify assignee
@@ -388,7 +393,8 @@ def create_ticket_jira(ticket, counter, total)
           case reason
           when /is not a user/i
             payload[:fields]["#{@customfield_name_to_id['Assembla-Reporter']}".to_sym] = payload[:fields][:reporter][:name]
-            payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
+            # payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
+            payload[:fields][:reporter][:accountId] = JIRA_API_LEAD_ACCOUNT_ID
             puts "Is not a user: #{reporter_name}"
             @is_not_a_user << reporter_name unless @is_not_a_user.include?(reporter_name)
             recover = true
@@ -489,7 +495,8 @@ end
 puts "\nUnknown user:"
 # IMPORTANT: You might have to comment out the following if-statement to get things working.
 if JIRA_API_UNKNOWN_USER && JIRA_API_UNKNOWN_USER.length
-  user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
+  # user = jira_get_user(JIRA_API_UNKNOWN_USER, false)
+  user = jira_get_user(JIRA_API_LEAD_ACCOUNT_ID, false)
   if user
     goodbye("Please activate Jira unknown user '#{JIRA_API_UNKNOWN_USER}' (see README.md)") unless user['active']
     puts "Found Jira unknown user '#{JIRA_API_UNKNOWN_USER}' => OK"

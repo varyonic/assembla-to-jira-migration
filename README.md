@@ -212,6 +212,9 @@ JIRA_API_PROJECT_TYPE=scrum
 JIRA_API_ADMIN_USER=john.doe
 JIRA_API_ADMIN_PASSWORD=secret
 JIRA_API_ADMIN_EMAIL=john.doe@example.org
+# You will need an account id for the project lead when creating a new project.
+# To get a list of known Jira users, execute `ruby jira_get_all_users.rb`
+JIRA_API_LEAD_ACCOUNT_ID=account-id
 JIRA_API_UNKNOWN_USER=unknown.user
 JIRA_API_DEFAULT_EMAIL=example.org
 JIRA_API_IMAGES_THUMBNAIL=description:false,comments:true
@@ -355,7 +358,7 @@ POST /rest/api/2/project
   projectTypeKey: 'software',
   description: project_description,
   projectTemplateKey: "com.pyxis.greenhopper.jira:gh-#{type}-template",
-  lead: username
+  leadAccountId: account_id
 }
 ```
 
@@ -364,6 +367,14 @@ where `#{type}` must be either `scrum` or `kanban`.
 ```
 $ ruby 05-jira_create_project.rb # => data/jira/:space/jira-serverinfo.csv
 ```
+
+IMPORTANT: If you are creating a JIRA project for the first time, e.g. it does not exist already, you will have to include the following line in the `.env` file:
+
+```
+JIRA_API_LEAD_ACCOUNT_ID=account-id
+```
+
+To get a list of known Jira users, execute `ruby jira_get_all_users.rb` and look for the user you want to define as the project lead.
 
 Depending on the value of `JIRA_API_PROJECT_TYPE` in the `.env` file, a scrum or kanban board will be created as well with board name `{projectKey} board`.
 
@@ -514,6 +525,8 @@ Go to the `Issues Custom Fields` page and click on the right of the given row to
 If for one reason or the other the script fails, you will need to define manually the following custom fields (text field read-only):
 
 * Assembla-Id
+* Assembla-Created-On
+* Assembla-Due-Date
 * Assembla-Status
 * Assembla-Milestone
 * Assembla-Reporter
