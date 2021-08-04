@@ -46,6 +46,20 @@ load './lib/common.rb'
     name: 'Text',
     jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:textfield',
     searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:textsearcher'
+  },
+  {
+    name: 'Date Time',
+    jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:datetime',
+    searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:datetimerange'
+    # jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:textfield',
+    # searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:textsearcher'
+  },
+  {
+    name: 'Checkbox',
+    jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:multicheckboxes',
+    searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher'
+    # jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:textfield',
+    # searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:textsearcher'
   }
 ]
 
@@ -102,7 +116,7 @@ missing_fields.each do |field|
   type = field['type']
   description = "Custom field '#{name}'"
   item = @assembla_to_jira_custom.detect { |f| f[:name] == type }
-  goodbye("Cannot convert Assembla type to Jira custom") unless item
+  goodbye("Cannot convert Assembla type='#{type}' to Jira custom") unless item
   jira_plugin = item[:jira_plugin]
   searcher_key = item[:searcherKey]
   custom_field = jira_create_custom_field(name, description, jira_plugin, searcher_key)

@@ -391,6 +391,10 @@ def create_ticket_jira(ticket, counter, total)
           end
         when 'reporter'
           case reason
+          when /cannot be set/i
+            payload[:fields].delete(:reporter)
+            puts "Removed reporter '#{reporter_name}' from issue"
+            recover = true
           when /is not a user/i
             payload[:fields]["#{@customfield_name_to_id['Assembla-Reporter']}".to_sym] = payload[:fields][:reporter][:name]
             # payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER

@@ -78,8 +78,8 @@ end
     next unless screen[:availableFields].detect { |field| name.casecmp(field['name']).zero? }
     field = jira_get_field_by_name(name)
     result = jira_add_field(screen[:id], screen[:tabs][0]['id'],field['id'])
-    goodbye("Cannot add field='#{name}'") unless result
-    screen[:tabs][0][:fields] << field
+    # goodbye("Cannot add field='#{name}'") unless result
+    screen[:tabs][0][:fields] << field if result
   end
 end
 
