@@ -9,6 +9,7 @@ load './lib/users-jira.rb'
 # name,key,accountId,emailAddress,displayName,active
 jira_get_all_groups.each_with_index do |group, index|
   @names << group['name']
+  puts group.inspect
 end
 
 @names.each_with_index do |name, index|

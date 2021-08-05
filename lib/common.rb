@@ -88,6 +88,10 @@ MAX_RETRY = 3
 JIRA_API_SKIP_EMPTY_COMMENTS = ENV['JIRA_API_SKIP_EMPTY_COMMENTS'] == 'true'
 JIRA_API_SKIP_COMMIT_COMMENTS = ENV['JIRA_API_SKIP_COMMIT_COMMENTS'] == 'true'
 
+# Bitbucket transformations for commit messages
+BITBUCKET_REPO_URL = ENV['BITBUCKET_REPO_URL']
+BITBUCKET_REPO_TABLE = ENV['BITBUCKET_REPO_TABLE']
+
 def csv_to_array(pathname)
   csv = CSV::parse(File.open(pathname) { |f| f.read })
   fields = csv.shift
