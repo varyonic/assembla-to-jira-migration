@@ -203,7 +203,7 @@ def create_ticket_jira(ticket, counter, total)
                   'unknown'
                 else
                   # "[~#{reporter_name}]"
-                  "[~accountid:#{reporter_name}]"
+                  "[~accountid:#{jira_reporter_id}]"
                 end
   description += "Author #{author_name} | "
   description += "Created on #{date_time(created_on)}\n\n"
@@ -283,10 +283,10 @@ def create_ticket_jira(ticket, counter, total)
   # Verify assignee
   if @cannot_be_assigned_issues.include?(assignee_name)
     warning("Assignee name='#{assignee_name}' cannot be assigned issues => REMOVE") unless assignee_name.nil? || assignee_name.length.zero?
-    payload[:fields][:assignee][:name] = ''
+    payload[:fields][:assignee][:id] = JIRA_API_LEAD_ACCOUNT_ID
   elsif @inactive_jira_users.include?(assignee_name)
     warning("Assignee name='#{assignee_name}' is inactive => REMOVE")
-    payload[:fields][:assignee][:name] = ''
+    payload[:fields][:assignee][:id] = JIRA_API_LEAD_ACCOUNT_ID
   end
 
   # --- Custom fields Assembla --- #
@@ -383,9 +383,9 @@ def create_ticket_jira(ticket, counter, total)
         when 'assignee'
           case reason
           when /cannot be assigned issues/i
-            payload[:fields]["#{@customfield_name_to_id['Assembla-Assignee']}".to_sym] = payload[:fields][:assignee][:name]
-            payload[:fields][:assignee][:name] = ''
-            puts "Cannot be assigned issues: #{assignee_name}"
+            # payload[:fields]["#{@customfield_name_to_id['Assembla-Assignee']}".to_sym] = payload[:fields][:assignee][:name]
+            payload[:fields][:assignee][:id] = JIRA_API_LEAD_ACCOUNT_ID
+            puts "Cannot be assigned issues: #{assignee_name}, changed to JIRA_API_LEAD_ACCOUNT_ID='#{JIRA_API_LEAD_ACCOUNT_ID}'"
             @cannot_be_assigned_issues << assignee_name unless @cannot_be_assigned_issues.include?(assignee_name)
             recover = true
           end
