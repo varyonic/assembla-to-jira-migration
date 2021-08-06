@@ -4,20 +4,41 @@ load './lib/common.rb'
 load './lib/users-jira.rb'
 
 # Set to true if you just want to run and verify this script without actually importing any comments.
-DRY_RUN = false
+DRY_RUN = true
 
 def dry_run_enabled(show)
   if DRY_RUN && show
     puts
-    puts '----------'
+    puts '----------------'
     puts 'DRY RUN enabled!'
-    puts '----------'
+    puts '----------------'
     puts
   end
-  return DRY_RUN
+  DRY_RUN
 end
 
 dry_run_enabled(true)
+
+@repo_table = {}
+def insert_bitbucket_repo_link(body)
+  re = /Commit: \[\[(?:.*):([0-9a-f]+)\|(.*):(?:.*)\]\]/i
+  if body&.match?(/^Commit\: /)
+    m = body&.match(re)
+    if m && m[1] && m[2]
+      match = m[0]
+      commit_hash = m[1]
+      from = m[2]
+      to = @repo_table[from]
+      if to.nil?
+        body.sub!(re, match + "\nERROR: Cannot find repo entry for '#{from}'")
+      else
+        url = "#{BITBUCKET_REPO_URL.sub('[[REPO-NAME]]', to)}/#{commit_hash}"
+        body.sub!(re, "Assembla " + match + "\nCommit: #{url}")
+      end
+    end
+  end
+  body
+end
 
 # Jira tickets
 # result,retries,message,jira_ticket_id,jira_ticket_key,project_id,summary,issue_type_id,issue_type_name,assignee_name,reporter_name,priority_name,status_name,labels,description,assembla_ticket_id,assembla_ticket_number,milestone_name,story_rank
@@ -65,7 +86,27 @@ if JIRA_API_SKIP_COMMIT_COMMENTS
     puts "Commit: #{comments_assembla_commit.length}"
     comments_assembla_commit = nil
   else
-    puts "Commit: None"
+    puts 'Commit: None'
+  end
+else
+  # Commits (comments) will be included as part of the import.
+  if BITBUCKET_REPO_URL
+    puts "BITBUCKET_REPO_URL = #{BITBUCKET_REPO_URL}"
+    if BITBUCKET_REPO_TABLE
+      puts "BITBUCKET_REPO_TABLE = #{BITBUCKET_REPO_TABLE}"
+      BITBUCKET_REPO_TABLE.split(',').each do |item|
+        (from, to) = item.split('|')
+        @repo_table[from] = to
+      end
+      puts 'The following repos translations will be made:'
+      @repo_table.each do |key, value|
+        puts " * #{key} => #{value}"
+      end
+    else
+      puts 'BITBUCKET_REPO_TABLE is not defined in the .env file'
+    end
+  else
+    puts 'BITBUCKET_REPO_URL is not defined in the .env file'
   end
 end
 
@@ -159,6 +200,7 @@ def jira_create_comment(issue_id, user_id, comment, counter)
                     else
                       comment['comment']
                     end
+  comment_comment = insert_bitbucket_repo_link(comment_comment) unless @repo_table.empty?
   reformatted_body = reformat_markdown(comment_comment, user_ids: @assembla_login_to_jira_id,
                                        images: @list_of_images, content_type: 'comments', strikethru: true)
   body = "Created on #{date_time(comment['created_on'])}\n\n#{reformatted_body}"
@@ -173,17 +215,17 @@ def jira_create_comment(issue_id, user_id, comment, counter)
     warning('Comment body length is greater than 32767 => truncate')
   end
   payload = {
-      body: body
+    body: body
   }.to_json
   percentage = ((counter * 100) / @comments_total).round.to_s.rjust(3)
+  if dry_run_enabled(false)
+    puts "issue_id='#{issue_id}' user_login='#{user_login}'"
+    puts '-----'
+    puts body
+    puts '-----'
+    return
+  end
   begin
-    if dry_run_enabled(false)
-      puts "issue_id='#{issue_id}' user_login='#{user_login}'"
-      puts '-----'
-      puts "'#{body}'"
-      puts '-----'
-      return
-    end
     response = RestClient::Request.execute(method: :post, url: url, payload: payload, headers: headers)
     result = JSON.parse(response.body)
     # Dry run: uncomment the following two lines and comment out the previous two lines.
@@ -203,13 +245,13 @@ def jira_create_comment(issue_id, user_id, comment, counter)
     issue_key = @a_ticket_id_to_j_issue_key[ticket_id]
     comment_id = result['id']
     comments_diff = {
-        jira_comment_id: comment_id,
-        jira_ticket_id: issue_id,
-        jira_ticket_key: issue_key,
-        assembla_comment_id: id,
-        assembla_ticket_id: ticket_id,
-        before: comment_comment,
-        after: reformatted_body
+      jira_comment_id: comment_id,
+      jira_ticket_id: issue_id,
+      jira_ticket_key: issue_key,
+      assembla_comment_id: id,
+      assembla_ticket_id: ticket_id,
+      before: comment_comment,
+      after: reformatted_body
     }
     write_csv_file_append(@comments_diffs_jira_csv, [comments_diff], @total_comments_diffs.zero?)
     @total_comments_diffs += 1
@@ -246,23 +288,23 @@ end
   if result
     comment_id = result['id']
     comment = {
-        jira_comment_id: comment_id,
-        jira_ticket_id: issue_id,
-        jira_ticket_key: issue_key,
-        assembla_comment_id: id,
-        assembla_ticket_id: ticket_id,
-        user_login: user_login,
-        body: body
+      jira_comment_id: comment_id,
+      jira_ticket_id: issue_id,
+      jira_ticket_key: issue_key,
+      assembla_comment_id: id,
+      assembla_ticket_id: ticket_id,
+      user_login: user_login,
+      body: body
     }
     write_csv_file_append(@comments_jira_csv, [comment], @total_imported.zero?)
     @total_imported += 1
   else
     comment_nok = {
-        error: issue_id.nil? ? 'invalid ticket_id' : 'create failed',
-        assembla_ticket_id: ticket_id,
-        assembla_comment_id: id,
-        user_login: user_login,
-        body: body
+      error: issue_id.nil? ? 'invalid ticket_id' : 'create failed',
+      assembla_ticket_id: ticket_id,
+      assembla_comment_id: id,
+      user_login: user_login,
+      body: body
     }
     write_csv_file_append(@comments_jira_nok_csv, [comment_nok], @total_imported_nok.zero?)
     @total_imported_nok += 1

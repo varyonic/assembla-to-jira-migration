@@ -4,7 +4,16 @@ load './lib/common.rb'
 load './lib/users-jira.rb'
 
 tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets.csv"
-@jira_tickets = csv_to_array(tickets_jira_csv)
+if File.exists?(tickets_jira_csv)
+  @jira_tickets = csv_to_array(tickets_jira_csv)
+else
+  puts "File '#{tickets_jira_csv}' does not exists"
+  tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets-append.csv"
+  if File.exists?(tickets_jira_csv)
+  else
+    puts "File '#{tickets_jira_csv}' does not exist either => Exit"
+  end
+end
 
 h = {}
 total = 0
