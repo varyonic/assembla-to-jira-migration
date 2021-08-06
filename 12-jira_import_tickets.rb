@@ -273,11 +273,11 @@ def create_ticket_jira(ticket, counter, total)
   if @is_not_a_user.include?(reporter_name)
     warning("Reporter name='#{reporter_name}' is not a user => RESET '#{JIRA_API_UNKNOWN_USER}'")
     # payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
-    payload[:fields][:reporter][:accountId] = JIRA_API_LEAD_ACCOUNT_ID
+    payload[:fields][:reporter][:id] = JIRA_API_LEAD_ACCOUNT_ID
   elsif @inactive_jira_users.include?(reporter_name)
     warning("Reporter name='#{reporter_name}' is inactive => RESET '#{JIRA_API_UNKNOWN_USER}'")
     # payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
-    payload[:fields][:reporter][:accountId] = JIRA_API_LEAD_ACCOUNT_ID
+    payload[:fields][:reporter][:id] = JIRA_API_LEAD_ACCOUNT_ID
   end
 
   # Verify assignee
@@ -380,6 +380,15 @@ def create_ticket_jira(ticket, counter, total)
         key = err[0]
         reason = err[1]
         case key
+        when 'summary'
+          case reason
+          when /can't exceed 255 characters/
+            # Truncate the summary below limit.
+            max = 255
+            payload[:fields][:summary] = "#{payload[:fields][:summary][0...max-3]}..."
+            puts "Truncated summary at #{max} characters to '#{payload[:fields][:summary]}'"
+            recover = true
+          end
         when 'assignee'
           case reason
           when /cannot be assigned issues/i
@@ -398,7 +407,7 @@ def create_ticket_jira(ticket, counter, total)
           when /is not a user/i
             payload[:fields]["#{@customfield_name_to_id['Assembla-Reporter']}".to_sym] = payload[:fields][:reporter][:name]
             # payload[:fields][:reporter][:name] = JIRA_API_UNKNOWN_USER
-            payload[:fields][:reporter][:accountId] = JIRA_API_LEAD_ACCOUNT_ID
+            payload[:fields][:reporter][:id] = JIRA_API_LEAD_ACCOUNT_ID
             puts "Is not a user: #{reporter_name}"
             @is_not_a_user << reporter_name unless @is_not_a_user.include?(reporter_name)
             recover = true
