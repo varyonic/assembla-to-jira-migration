@@ -222,33 +222,33 @@ def create_ticket_jira(ticket, counter, total)
   issue_type = get_issue_type(ticket)
 
   payload = {
-      'create': {},
-      'fields': {
-          'project': { 'id': project_id },
-          'summary': summary,
-          'issuetype': { 'id': issue_type[:id] },
-          # 'reporter': { 'name': reporter_name },
-          'reporter': { 'id': jira_reporter_id },
-          # 'assignee': { 'name': assignee_name },
-          'assignee': { 'id': jira_assignee_id },
-          'priority': { 'name': priority_name },
-          # IMPORTANT: You might have to comment out the following line to get things working.
-          'labels': labels,
-          'description': description,
+    'create': {},
+    'fields': {
+      'project': { 'id': project_id },
+      'summary': summary,
+      'issuetype': { 'id': issue_type[:id] },
+      # 'reporter': { 'name': reporter_name },
+      'reporter': { 'id': jira_reporter_id },
+      # 'assignee': { 'name': assignee_name },
+      'assignee': { 'id': jira_assignee_id },
+      'priority': { 'name': priority_name },
+      # IMPORTANT: You might have to comment out the following line to get things working.
+      'labels': labels,
+      'description': description,
 
-          # IMPORTANT: The following custom fields MUST be on the create issue screen for this project
-          #  Admin > Issues > Screens > Configure screen > 'PROJECT_KEY: Scrum Default Issue Screen'
-          # Assembla
+      # IMPORTANT: The following custom fields MUST be on the create issue screen for this project
+      #  Admin > Issues > Screens > Configure screen > 'PROJECT_KEY: Scrum Default Issue Screen'
+      # Assembla
 
-          "#{@customfield_name_to_id['Assembla-Id']}": ticket_number,
-          "#{@customfield_name_to_id['Assembla-Created-On']}": date_format_datetime(created_on),
-          "#{@customfield_name_to_id['Assembla-Due-Date']}": date_format_datetime(due_date),
-          "#{@customfield_name_to_id['Assembla-Reporter']}": reporter_name,
-          "#{@customfield_name_to_id['Assembla-Assignee']}": assignee_name,
-          "#{@customfield_name_to_id['Assembla-Status']}": status_name,
-          "#{@customfield_name_to_id['Assembla-Milestone']}": @nr_milestones.nonzero? ? milestone[:name] : nil,
-          "#{@customfield_name_to_id['Assembla-Completed']}": date_format_datetime(completed_date)
-      }
+      "#{@customfield_name_to_id['Assembla-Id']}": ticket_number,
+      "#{@customfield_name_to_id['Assembla-Created-On']}": date_format_datetime(created_on),
+      "#{@customfield_name_to_id['Assembla-Due-Date']}": date_format_datetime(due_date),
+      "#{@customfield_name_to_id['Assembla-Reporter']}": reporter_name,
+      "#{@customfield_name_to_id['Assembla-Assignee']}": assignee_name,
+      "#{@customfield_name_to_id['Assembla-Status']}": status_name,
+      "#{@customfield_name_to_id['Assembla-Milestone']}": @nr_milestones.nonzero? ? milestone[:name] : nil,
+      "#{@customfield_name_to_id['Assembla-Completed']}": date_format_datetime(completed_date)
+    }
   }
 
   # Assembla-Estimate => 0=None, 1=Small, 3=Medium, 7=Large
@@ -363,9 +363,9 @@ def create_ticket_jira(ticket, counter, total)
     # puts "description_ticket_links='#{description_ticket_links}'" if description_ticket_links
     if summary_ticket_links || description_ticket_links
       @jira_ticket_links << {
-          jira_ticket_key: jira_ticket_key,
-          summary: summary_ticket_links,
-          description: description_ticket_links
+        jira_ticket_key: jira_ticket_key,
+        summary: summary_ticket_links,
+        description: description_ticket_links
       }
     end
 
@@ -407,8 +407,8 @@ def create_ticket_jira(ticket, counter, total)
           case reason
           when /is a sub-task but parent issue key or id not specified/i
             issue_type = {
-                id: @issue_type_name_to_id['task'],
-                name: 'task'
+              id: @issue_type_name_to_id['task'],
+              name: 'task'
             }
             payload[:fields][:issuetype][:id] = issue_type[:id]
             payload[:fields].delete(:parent)
@@ -438,38 +438,38 @@ def create_ticket_jira(ticket, counter, total)
   if ok
     if ticket['description'] != reformatted_description
       @tickets_diffs << {
-          assembla_ticket_id: ticket_id,
-          assembla_ticket_number: ticket_number,
-          jira_ticket_id: jira_ticket_id,
-          jira_ticket_key: jira_ticket_key,
-          project_id: project_id,
-          before: ticket['description'],
-          after: reformatted_description
+        assembla_ticket_id: ticket_id,
+        assembla_ticket_number: ticket_number,
+        jira_ticket_id: jira_ticket_id,
+        jira_ticket_key: jira_ticket_key,
+        project_id: project_id,
+        before: ticket['description'],
+        after: reformatted_description
       }
     end
     @assembla_number_to_jira_key[ticket_number] = jira_ticket_key
   end
 
   {
-      result: (ok ? 'OK' : 'NOK'),
-      retries: retries,
-      message: (ok ? '' : message.gsub(' | ', "\n\n")),
-      jira_ticket_id: jira_ticket_id,
-      jira_ticket_key: jira_ticket_key,
-      project_id: project_id,
-      summary: summary,
-      issue_type_id: issue_type[:id],
-      issue_type_name: issue_type[:name],
-      assignee_name: assignee_name,
-      reporter_name: reporter_name,
-      priority_name: priority_name,
-      status_name: status_name,
-      labels: (labels || []).join('|'),
-      description: description,
-      assembla_ticket_id: ticket_id,
-      assembla_ticket_number: ticket_number,
-      milestone_name: @nr_milestones ? milestone[:name] : '',
-      story_rank: story_rank
+    result: (ok ? 'OK' : 'NOK'),
+    retries: retries,
+    message: (ok ? '' : message.gsub(' | ', "\n\n")),
+    jira_ticket_id: jira_ticket_id,
+    jira_ticket_key: jira_ticket_key,
+    project_id: project_id,
+    summary: summary,
+    issue_type_id: issue_type[:id],
+    issue_type_name: issue_type[:name],
+    assignee_name: assignee_name,
+    reporter_name: reporter_name,
+    priority_name: priority_name,
+    status_name: status_name,
+    labels: (labels || []).join('|'),
+    description: description,
+    assembla_ticket_id: ticket_id,
+    assembla_ticket_number: ticket_number,
+    milestone_name: @nr_milestones ? milestone[:name] : '',
+    story_rank: story_rank
   }
 end
 
@@ -657,8 +657,8 @@ end
   jira_name = @a_user_id_to_j_user_name[reporter_id]
   unless jira_name
     @invalid_reporters << {
-        ticket_id: ticket_id,
-        reporter_id: reporter_id
+      ticket_id: ticket_id,
+      reporter_id: reporter_id
     }
   end
 end
@@ -705,3 +705,35 @@ write_csv_file(ticket_links_jira_csv, @jira_ticket_links)
 
 tickets_diffs_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets-diffs.csv"
 write_csv_file(tickets_diffs_jira_csv, @tickets_diffs)
+
+# Statistics
+#
+tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets.csv"
+@jira_tickets = csv_to_array(tickets_jira_csv)
+
+puts
+
+h = {}
+total = 0
+@jira_tickets.each do |ticket|
+  next if ticket['result'] == 'OK'
+  messages = ticket['message'].split("\n\n")
+  total += 1
+  messages.each do |message|
+    if h[message]
+      h[message] += 1
+    else
+      h[message] = 1
+    end
+  end
+end
+
+if total.zero?
+  puts 'Congratulations! All tickets were imported successfully.'
+else
+  puts 'Oops! Not all tickets were imported successfully.'
+  puts "Total NOK: #{total}"
+  h.each do |key, value|
+    puts "#{value}: '#{key}'"
+  end
+end
