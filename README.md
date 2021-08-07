@@ -230,6 +230,7 @@ BITBUCKET_REPO_TABLE=from_repos1|to_repos1,from_repos2|to_repos2
 # Mangle external emails not ending with the following suffixes, (must start with a '@') comment line in order to disable.
 # Important: this needs to be restored after the migration so that the user can access the project as usual.
 MANGLE_EXTERNAL_EMAILS_NOT=@company1.com,@company2.com,bedrijf1.nl
+MANGLE_EXTERNAL_EMAILS_NOT_IGNORE=me@gmail.com,joe.doh@hello.nl
 
 JIRA_API_STATUSES=New:To Do,In Progress,Code Review:Review,Test,Test: In Progress:Test,Ready for Deploy:Ready,Re-opened:To Do,Fixed/Closed:Done,Deferred:To Do,Invalid/Duplicate:Done
 
