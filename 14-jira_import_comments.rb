@@ -4,7 +4,7 @@ load './lib/common.rb'
 load './lib/users-jira.rb'
 
 # Set to true if you just want to run and verify this script without actually importing any comments.
-DRY_RUN = true
+DRY_RUN = false
 
 def dry_run_enabled(show)
   if DRY_RUN && show
