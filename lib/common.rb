@@ -92,6 +92,9 @@ JIRA_API_SKIP_COMMIT_COMMENTS = ENV['JIRA_API_SKIP_COMMIT_COMMENTS'] == 'true'
 BITBUCKET_REPO_URL = ENV['BITBUCKET_REPO_URL']
 BITBUCKET_REPO_TABLE = ENV['BITBUCKET_REPO_TABLE']
 
+# Mangle external emails not ending with the following suffixes.
+MANGLE_EXTERNAL_EMAILS_NOT = (ENV['MANGLE_EXTERNAL_EMAILS_NOT'] || '').split(',')
+
 def csv_to_array(pathname)
   csv = CSV::parse(File.open(pathname) { |f| f.read })
   fields = csv.shift

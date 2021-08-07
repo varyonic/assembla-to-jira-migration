@@ -4,6 +4,24 @@ load './lib/common.rb'
 
 load './lib/users-jira.rb'
 
+# Convert 'john.doe@company.com' to 'john.doe_@_company.com'
+# Do not convert @example.org or admin email, e.g. leave unchanged
+def mangle_email(email)
+  return email if email == JIRA_API_ADMIN_EMAIL
+  m = email.split('@')
+  return email if m[1] == 'example.org'
+  "#{m[0]}_@_#{m[1]}"
+end
+
+if MANGLE_EXTERNAL_EMAILS_NOT.count.zero?
+  puts "MANGLE_EXTERNAL_EMAILS_NOT = '#{MANGLE_EXTERNAL_EMAILS_NOT}' is empty"
+else
+  puts "MANGLE_EXTERNAL_EMAILS_NOT = '#{MANGLE_EXTERNAL_EMAILS_NOT}'"
+  MANGLE_EXTERNAL_EMAILS_NOT.each do |suffix|
+    puts "* #{suffix}"
+  end
+end
+
 # IMPORTANT: Make sure that the `JIRA_API_ADMIN_USER` exists, is activated and belongs to both
 # the `site-admins` and the `jira-administrators` groups.
 #
@@ -64,6 +82,11 @@ end
   else
     # User does not exist so create if possible and add to list
     puts "username='#{username}', email='#{email}' not found => CREATE"
+    # If enabled, we need to mangle the emails of any external users so that they
+    # will not be notified during creation (because the email is invalid)
+    # Important: this needs to be restored after the migration so that the user
+    # can access the project as usual.
+    user['email'] = mangle_email(user['email'])
     u2 = jira_create_user(user)
     if u2
       @users_jira << { 'assemblaId': user['id'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }.merge(u2)
