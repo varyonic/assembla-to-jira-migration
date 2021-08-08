@@ -497,7 +497,9 @@ which is used to import the attachments into Jira in the following section. A ch
 
 Note that in Jira images are treated as attachments and can be accessed that way via `[[image:IMAGE|NAME]]`.
 
-Important: this step needs to be done before importing tickets (next section) in order that the markdown for embedded attachment (images) will work correctly.
+Note: If you get the error `NOK (Tool not found for this project)`, try running the `assembla_enable_file_tool.rb` helper script to fix it. If this doesn't work, then you will have to enable the file set via the Assembla admin dashboard.
+
+Important: this step MUST be done before importing tickets (next section) in order that the markdown for embedded attachment (images) will work correctly.
 
 ### Create custom fields
 
@@ -1608,7 +1610,7 @@ gsub(/\[\[image:(.*?)(\|(.*?))?\]\]/i) { |image| markdown_image(image, images, c
 
 ## Trouble-shooting
 
-* Unable to download Assembla attachments `GET https://api.assembla.com/v1/spaces/:space/documents/dfVsC8_o4r6OoPaMlMwbiA/download => NOK (Tool not found for this project)`. Please ensure that the space has file toolsets enabled.
+* Unable to download Assembla attachments `GET https://api.assembla.com/v1/spaces/:space/documents/dfVsC8_o4r6OoPaMlMwbiA/download => NOK (Tool not found for this project)`. Please ensure that the space has file toolsets enabled by running the `assembla_enable_file_tool.rb` helper script.
 * Strange permission errors when creating tickets, adding watchers, etc. This is more than likely because the user defined by `JIRA_API_ADMIN_USER` does not belong to the `jira-administrators` group.
 * Ticket import error `key='issuetype', reason='The issue type selected is invalid.'`. Go to the project issue types scheme, edit and ensure that issue type is included in the list, e.g. spike.
 * Error `403 Unauthorized`. Go to the Jira application, login as admin and try again.
