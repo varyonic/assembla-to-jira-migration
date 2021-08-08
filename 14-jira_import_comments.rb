@@ -147,7 +147,12 @@ end
 
 # Jira attachments (images)
 attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
-@attachments_jira = csv_to_array(attachments_jira_csv)
+if File.exists?(attachments_jira_csv)
+  @attachments_jira = csv_to_array(attachments_jira_csv)
+else
+  puts "File '#{attachments_jira_csv}' is missing, no attachments detected."
+  @attachments_jira = []
+end
 
 @list_of_images = {}
 @attachments_jira.each do |attachment|
