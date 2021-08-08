@@ -324,6 +324,11 @@ def create_ticket_jira(ticket, counter, total)
         payload[:fields]["#{@customfield_name_to_id[k]}".to_sym] = {}
         payload[:fields]["#{@customfield_name_to_id[k]}".to_sym][:name] = user_name
       end
+    elsif type == 'Date Time'
+      if value.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
+        value = value.sub(' ', 'T') + '.000' + ASSEMBLA_TIMEZONE
+      end
+      payload[:fields]["#{@customfield_name_to_id[k]}".to_sym] = value
     else
       payload[:fields]["#{@customfield_name_to_id[k]}".to_sym] = value
     end
@@ -385,7 +390,7 @@ def create_ticket_jira(ticket, counter, total)
           when /can't exceed 255 characters/
             # Truncate the summary below limit.
             max = 255
-            payload[:fields][:summary] = "#{payload[:fields][:summary][0...max-3]}..."
+            payload[:fields][:summary] = "#{payload[:fields][:summary][0...max - 3]}..."
             puts "Truncated summary at #{max} characters to '#{payload[:fields][:summary]}'"
             recover = true
           end

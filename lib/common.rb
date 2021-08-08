@@ -30,6 +30,12 @@ ASSEMBLA_TYPES_EXTRA = (ENV['ASSEMBLA_TYPES_EXTRA'] || '').split(',')
 
 ASSEMBLA_TICKET_REPORT = ENV['ASSEMBLA_TICKET_REPORT'] || 0
 
+ASSEMBLA_TIMEZONE = ENV['ASSEMBLA_TIMEZONE'] || '+0100'
+unless ASSEMBLA_TIMEZONE.match?(/^\+\d{4}$/)
+  puts "Invalid ASSEMBLA_TIMEZONE='#{ASSEMBLA_TIMEZONE}', please correct in the .env file"
+  exit
+end
+
 JIRA_API_BASE = ENV['JIRA_API_BASE'].freeze
 
 unless %r{^https?://}.match?(JIRA_API_BASE)

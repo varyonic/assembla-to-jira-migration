@@ -197,6 +197,7 @@ ASSEMBLA_SKIP_ASSOCIATIONS=parent,child,story,subtask
 # Ticket types extracted from ticket summary, e.g. starting with 'Spike: '
 ASSEMBLA_TYPES_EXTRA=spike,bug
 ASSEMBLA_CUSTOM_FIELD=field-name
+ASSEMBLA_TIMEZONE=+0100
 
 # --- Jira API settings --- #/
 # Server type must be 'hosted' or 'cloud'
