@@ -8,6 +8,19 @@ load './lib/screens.rb'
 @fields_jira = jira_get_fields
 goodbye('Cannot get fields!') unless @fields_jira
 
+puts "\nTotal custom fields: #{@fields_jira.count}"
+@fields_jira.sort{|a,b| a['name'] <=> b['name']}.each do |field|
+  schema = field['schema']
+  prefix = "#{field['name']} | id='#{field['id']}'"
+  suffix = if schema
+             custom = schema['custom']
+             " | type='#{schema['type']}'" + (custom.nil? || custom.length.zero? ? "" : " | custom='#{custom}'")
+           else
+             ''
+  end
+  puts "#{prefix}#{suffix}"
+end
+
 def jira_get_field_by_name(name)
   @fields_jira.find{ |field| field['name'] == name }
 end

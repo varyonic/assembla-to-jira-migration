@@ -87,15 +87,15 @@ end
 
 puts
 @users_assembla.each do |user|
+  username = user['login'].sub(/@.*$/, '')
   if user['count'].to_i.zero?
     puts "username='#{username}' zero count => SKIP"
     next
   end
-  username = user['login'].sub(/@.*$/, '')
   email = user['email']
   if email.nil? || email.length.zero?
-    email = "#{JIRA_API_UNKNOWN_USER}#{JIRA_API_DEFAULT_EMAIL}"
-    puts "username='#{username}' does NOT have a valid email, changed to '#{email}'"
+    email = "#{username}@#{JIRA_API_DEFAULT_EMAIL}"
+    puts "username='#{username}' does NOT have a valid email, changed it to '#{email}'"
     user['email'] = email
   end
   u1 = jira_get_user_by_username(@existing_users_jira, username)
@@ -112,6 +112,7 @@ puts
     # will not be notified during creation (because the email is invalid)
     # Important: this needs to be restored after the migration so that the user
     # can access the project as usual.
+    puts "email='#{email}'"
     suffix_with_at = '@' + email.split('@')[1]
     unless MANGLE_EXTERNAL_EMAILS_NOT.include?(suffix_with_at.downcase)
       email_mangled = mangle_email(email)

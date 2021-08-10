@@ -63,7 +63,7 @@ load './lib/common.rb'
   },
   {
     name: 'Checkbox',
-    # TODO: with multicheckboxes, must provide an array of values.
+    # TODO: with multicheckboxes, must provide an array of values (for now just use text)
     # jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:multicheckboxes',
     # searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher'
     jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:textfield',
@@ -74,6 +74,11 @@ load './lib/common.rb'
 @custom_plugin_names = @assembla_to_jira_custom.map { |f| f[:jira_plugin] }
 @customfield_name_to_id = {}
 @customfield_id_to_name = {}
+
+@assembla_type_to_jira_plugin = {}
+@assembla_to_jira_custom.each do |item|
+  @assembla_type_to_jira_plugin[item[:name]] = item[:jira_plugin]
+end
 
 # --- Assembla Custom fields --- #
 
@@ -86,16 +91,29 @@ goodbye('Cannot get custom fields!') unless @custom_fields_assembla.length.nonze
   field['custom'] && @custom_plugin_names.index(field['schema']['custom']) && field['name'] !~ /^Assembla/
 end
 
-puts "\nFound the following Jira custom fields:\n\n"
-
-@custom_fields_jira.each do |field|
-  puts "* #{field['name']}"
+puts "\nTotal custom fields: #{@custom_fields_jira.count}"
+@custom_fields_jira.sort { |a, b| a['name'] <=> b['name'] }.each do |field|
+  schema = field['schema']
+  prefix = "#{field['name']} | id='#{field['id']}'"
+  suffix = if schema
+             custom = schema['custom']
+             " | type='#{schema['type']}'" + (custom.nil? || custom.length.zero? ? "" : " | custom='#{custom}'")
+           else
+             ''
+           end
+  puts "* #{prefix}#{suffix}"
 end
 
 missing_fields = []
 @custom_fields_assembla.each do |field_assembla|
   name = field_assembla['title']
-  field = @custom_fields_jira.detect { |field_jira| field_jira['name'] == name }
+  type = field_assembla['type']
+  jira_plugin = @assembla_type_to_jira_plugin[type]
+  if jira_plugin.nil?
+    puts "Cannot find jira_plugin for field_assembla name='#{name}' type='#{type}'"
+    exit
+  end
+  field = @custom_fields_jira.detect { |field_jira| field_jira['name'] == name && field_jira['schema']['custom'] == jira_plugin }
   if field
     id = field['id']
     @customfield_name_to_id[name] = id
@@ -105,10 +123,13 @@ missing_fields = []
   end
 end
 
-if missing_fields.length.nonzero?
-  puts "\nMissing Assembla custom fields:"
+if missing_fields.count.nonzero?
+  puts "\nTotal missing Assembla custom fields: #{missing_fields.count}"
   missing_fields.each do |field|
-    puts "* #{field['title']}"
+    title = field['title']
+    type = field['type']
+    jira_plugin = @assembla_type_to_jira_plugin[type]
+    puts "* title='#{title}' | type='#{type}' | jira_plugin='#{jira_plugin}'"
   end
 else
   puts "\nThere are no missing Assembla custom fields, so exit."
@@ -122,11 +143,11 @@ todo_list = []
 missing_fields.each do |field|
   name = field['title']
   type = field['type']
-  description = "Custom field '#{name}'"
   item = @assembla_to_jira_custom.detect { |f| f[:name] == type }
   goodbye("Cannot convert Assembla type='#{type}' to Jira custom") unless item
   jira_plugin = item[:jira_plugin]
   searcher_key = item[:searcherKey]
+  description = "Assembla custom field '#{name}' of type '#{type}' which has been converted to jira plugin '#{jira_plugin}'"
   custom_field = jira_create_custom_field(name, description, jira_plugin, searcher_key)
   if custom_field
     todo_list << field if item[:name] == 'List'
