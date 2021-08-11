@@ -51,23 +51,16 @@ load './lib/common.rb'
     name: 'Date',
     jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:datetime',
     searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:datetimerange'
-    # jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:textfield',
-    # searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:textsearcher'
   },
   {
     name: 'Date Time',
     jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:datetime',
     searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:datetimerange'
-    # jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:textfield',
-    # searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:textsearcher'
   },
   {
     name: 'Checkbox',
-    # TODO: with multicheckboxes, must provide an array of values (for now just use text)
-    # jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:multicheckboxes',
-    # searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher'
-    jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:textfield',
-    searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:textsearcher'
+    jira_plugin: 'com.atlassian.jira.plugin.system.customfieldtypes:radiobuttons',
+    searcherKey: 'com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher'
   }
 ]
 

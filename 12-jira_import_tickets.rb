@@ -93,7 +93,7 @@ puts
 # Create a list of users who are inactive.
 @inactive_jira_users = []
 jira_get_all_users.each do |user|
-  @inactive_jira_users << user['name'] unless user['active']
+  @inactive_jira_users << user['displayName'] unless user['active']
 end
 
 puts "Inactive Jira users: #{@inactive_jira_users.length}"
@@ -325,8 +325,11 @@ def create_ticket_jira(ticket, counter, total)
         payload[:fields]["#{@customfield_name_to_id[k]}".to_sym][:name] = user_name
       end
     elsif type == 'Date Time'
+      # Assembla custom fields of type "Date Time" have format: "YYYY-MM-DD hh:mm:ss" but they need to be
+      # converted to ISO date format: "yyyy-MM-dd\'T\'HH:mm:ss.SSSZ".
       if value.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
-        value = value.sub(' ', 'T') + '.000' + ASSEMBLA_TIMEZONE
+        value = value.sub(' ', 'T') + '.000Z'
+        # value = value.sub(' ', 'T') + '.000' + ASSEMBLA_TIMEZONE
       end
       payload[:fields]["#{@customfield_name_to_id[k]}".to_sym] = value
     else
@@ -377,7 +380,12 @@ def create_ticket_jira(ticket, counter, total)
     ok = true
   rescue RestClient::ExceptionWithResponse => e
     error = JSON.parse(e.response)
-    message = error['errors'].map { |k, v| "#{k}: #{v}" }.join(' | ')
+    message = "no messages"
+    if !error['errors'].empty?
+      message = error['errors'].map { |k, v| "#{k}: #{v}" }.join(' | ')
+    elsif !error['errorMessages'].empty?
+      message = error['errorMessages'].join(' | ')
+    end
     retries += 1
     recover = false
     if retries < MAX_RETRY
