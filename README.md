@@ -337,22 +337,22 @@ This allows you to recover better to the previous step in case of failure, for e
 If you also want to capture the output, then you can run the above commands like this:
 
 ```
-$ ruby nn-assembla_xxx.rb | tee logs/nn-assembla_xxx.log
+$ ruby nn-assembla_xxx.rb | tee logs/nn.log
 ```
 
 In other words:
 
 ```
-$ ruby 01-assembla_export_space.rb | tee logs/01-assembla_export_space.log
-$ ruby 02-assembla_export_tickets.rb | tee logs/02-assembla_export_tickets.log
-$ ruby 03-assembla_report_users.rb | tee logs/03-assembla_report_users.log
-$ ruby 04-assembla_report_tickets.rb | tee logs/04-assembla_report_tickets.log
+$ ruby 01-assembla_export_space.rb | tee logs/01.log
+$ ruby 02-assembla_export_tickets.rb | tee logs/02.log
+$ ruby 03-assembla_report_users.rb | tee logs/03.log
+$ ruby 04-assembla_report_tickets.rb | tee logs/04.log
 ```
 
 And watch the progress as follows:
 
 ```
-$ tail -f logs/nn-assembal_xxx.log
+$ tail -f logs/nn.log
 ```
 
 

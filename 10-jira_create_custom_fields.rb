@@ -29,6 +29,16 @@ end
 
 project = jira_get_project_by_name(JIRA_API_PROJECT_NAME)
 
+# # id,name,description
+# @screens_jira = jira_get_project_screens(project['id'])
+#
+# puts "\nTotal screens: #{@screens_jira}"
+# @screens_jira.each do |screen|
+#   puts "* id='#{screen['id']}' name='#{screen['name']}' description='#{screen['description']}'"
+# end
+#
+# @screens_jira = jira_get_project_screens(project_id)
+
 unless ARGV.length == 2
   goodbye('Missing screens ids, ARGV1=screen_id1 and ARGV2=screen_id2 (see README.md).')
 end
