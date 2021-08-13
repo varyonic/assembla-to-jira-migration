@@ -116,14 +116,14 @@ puts "\nTotal bitbucket repo_urls: #{@bitbucket_repo_urls.count}"
 end
 
 def get_conversion(assembla_space_key)
-  @conversions.detect { |key| key.split(DELIMITER)[0] == assembla_space_key }
+  @conversions.detect { |key, _| key.split(DELIMITER)[0] == assembla_space_key }[1]
 end
 
 def assembla_to_bitbucket_repo_url(assembla_space_key, assembla_repo_url)
   bitbucket_repo_url = nil
   found_conversion = get_conversion(assembla_space_key)
   if found_conversion
-    found_value = found_conversion.values.detect { |value| value[:assembla_repo_url] == assembla_repo_url}
+    found_value = found_conversion.detect { |item| item[:assembla_repo_url] == assembla_repo_url}
     if found_value
       bitbucket_repo_url = found_value[:bitbucket_repo_url]
     end
@@ -132,3 +132,14 @@ def assembla_to_bitbucket_repo_url(assembla_space_key, assembla_repo_url)
 end
 
 # Sanity checks.
+repos.each do |repo|
+  assembla_space_key = repo['assembla_space_key']
+  assembla_repo_url = repo['assembla_repo_url']
+  bitbucket_repo_url = repo['bitbucket_repo_url']
+  unless bitbucket_repo_url == assembla_to_bitbucket_repo_url(assembla_space_key, assembla_repo_url)
+    puts "Cannot find correct bitbucket_repo_url='#{bitbucket_repo_url}' for assembla_space_key='#{assembla_space_key}' assembla_repo_url='#{assembla_repo_url}'"
+    exit
+  end
+end
+
+puts "\nAll sanity checks pass"
