@@ -695,6 +695,7 @@ end
 
 puts "\nReporters => OK"
 
+# We append a running total in case a restart from a given offset is done.
 @tickets_jira_csv_append = "#{OUTPUT_DIR_JIRA}/jira-tickets-append.csv"
 
 @completed = 0

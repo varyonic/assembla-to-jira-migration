@@ -270,6 +270,15 @@ CONFLUENCE_EMAIL=kiffin.gish@planet.nl
 CONFLUENCE_PASSWORD=secret
 ```
 
+In order to simplify the process for the customer of providing a list of multiple projects which need to be migrated, the following template file can be used 
+for providing data per project:
+
+```
+.env-example-template.txt
+```
+
+which contains a list of only those values that differ per project, e.g. once the global credential and keys have been properly setup.
+
 By using the filter `TICKETS_CREATED_ON` you can limited the tickets to those that were created on or after the date indicated. So for example:
 
 ```

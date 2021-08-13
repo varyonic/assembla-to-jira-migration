@@ -97,6 +97,7 @@ JIRA_API_SKIP_COMMIT_COMMENTS = ENV['JIRA_API_SKIP_COMMIT_COMMENTS'] == 'true'
 # Bitbucket transformations for commit messages
 BITBUCKET_REPO_URL = ENV['BITBUCKET_REPO_URL']
 BITBUCKET_REPO_TABLE = ENV['BITBUCKET_REPO_TABLE']
+BITBUCKET_REPO_CONVERSIONS = ENV['BITBUCKET_REPO_CONVERSIONS'] || 'data/bitbucket-repo-conversions.csv'
 
 # Mangle external emails not ending with the following suffixes, concerting to lowercase.
 MANGLE_EXTERNAL_EMAILS_NOT = (ENV['MANGLE_EXTERNAL_EMAILS_NOT'] || '').split(',').map(&:downcase)
