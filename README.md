@@ -186,64 +186,88 @@ TICKETS_CREATED_ON=YYYY-MM-DD
 DEBUG=false
 
 # --- Assembla settings --- #
+# Do NOT change the following line!
+#For companies in Europe you might have to use 'eu-api' instead of 'api'
+#ASSEMBLA_API_HOST=https://eu-api.assembla.com/v1
 ASSEMBLA_API_HOST=https://[eu-]api.assembla.com/v1
 ASSEMBLA_API_KEY=api-key
 ASSEMBLA_API_SECRET=api-secret
-ASSEMBLA_URL_TICKETS=https://[eu-]app.assembla.com/spaces/[:space-name]/tickets
-ASSEMBLA_SPACE=[:space-name]
-ASSEMBLA_WIKI=https://[:company-name].assembla.com/spaces/[:space-name]/wiki
-ASSEMBLA_WIKI_NAME=[:space-name]
+#ASSEMBLA_URL_TICKETS=https://eu-app.assembla.com/spaces/[:space-name]/tickets
+ASSEMBLA_URL_TICKETS=https://app.assembla.com/spaces/[:space-path]/tickets
+ASSEMBLA_SPACE="Assembla Space Name"
+ASSEMBLA_WIKI=https://[:company-name].assembla.com/spaces/[:space-path]/wiki
+ASSEMBLA_WIKI_NAME="Assembla Wiki Name"
 ASSEMBLA_SKIP_ASSOCIATIONS=parent,child,story,subtask
 # Ticket types extracted from ticket summary, e.g. starting with 'Spike: '
 ASSEMBLA_TYPES_EXTRA=spike,bug
-ASSEMBLA_CUSTOM_FIELD=field-name
+# 0: All Tickets, 1: Active Tickets, order by milestone, 4: Closed Tickets, order by milestone, personal reports start with "u"
+ASSEMBLA_TICKET_REPORT=0
 ASSEMBLA_TIMEZONE=+0100
 
-# --- Jira API settings --- #/
+# --- Jira API settings --- #
 # Server type must be 'hosted' or 'cloud'
 JIRA_SERVER_TYPE=cloud
 # Base must start with 'https?://'
 JIRA_API_BASE=https://jira.example.org
+# Do NOT change the following line!
 JIRA_API_HOST=rest/api/2
-JIRA_API_PROJECT_NAME=name
-JIRA_API_PROJECT_KEY=key
-JIRA_API_KEY=secret
+JIRA_API_PROJECT_NAME="Jira Project Name"
+JIRA_API_PROJECT_KEY=jira-key
+JIRA_BOARD_NAME="Jira Project Name: [:jira-key] board"
 # Project type must be scrum (default) or kanban
 JIRA_API_PROJECT_TYPE=scrum
+JIRA_API_KEY=secret
 JIRA_API_ADMIN_USER=john.doe
-JIRA_API_ADMIN_PASSWORD=secret
-JIRA_API_ADMIN_EMAIL=john.doe@example.org
 # You will need account ids for the admin and project lead when creating a new project. They can be
 # one and the same person. To generate a list of known Jira users, execute `ruby jira_get_all_users.rb`
 JIRA_API_ADMIN_ACCOUNT_ID=account-id
 JIRA_API_LEAD_ACCOUNT_ID=account-id
+JIRA_API_ADMIN_PASSWORD=secret
+JIRA_API_ADMIN_EMAIL=john.doe@example.org
 JIRA_API_UNKNOWN_USER=unknown.user
-JIRA_API_DEFAULT_EMAIL=example.org
+JIRA_API_DEFAULT_EMAIL=@example.org
 JIRA_API_IMAGES_THUMBNAIL=description:false,comments:true
+
+JIRA_API_USER_GROUPS=jira-administrators,jira-core-users,site-admins,jira-software-users
+
+# Issues Configuration
+# Set Default Issue Type if Plan Level is not set in Assembla, Default: task, Must be valid JIRA issue type
+# JIRA_ISSUE_DEFAULT_TYPE=story
+
+JIRA_API_ASSEMBLA_ID_IN_TITLE=false
 JIRA_API_SKIP_EMPTY_COMMENTS=true
 JIRA_API_SKIP_COMMIT_COMMENTS=true
 
 # If JIRA_API_SKIP_COMMIT_COMMENTS is false, use BitBucket table for translations of assembla links to bitbucket repos.
-# Important: the placeholder '[[REPO-NAME]]' must NOT be removed/changed, it is used for inserting the repository name.
-BITBUCKET_REPO_URL='https://bitbucket.org/:company/[[REPO-NAME]]/commits'
-BITBUCKET_REPO_TABLE=from_repos1|to_repos1,from_repos2|to_repos2
+# Important: the placeholder '[[REPO-NAME]]' must NOT be removed/changed, it is used for inserting the repository name. The ':company' field should be replaced with the company path.
+BITBUCKET_REPO_URL='https://bitbucket.org/[:company-path]/[[REPO-NAME]]/commits'
+BITBUCKET_REPO_TABLE=from_repos1|to_repos1,from_repos2|to_repos2,...,from_reposn|to_reposn
+# Or you can provide a csv file to read in with the following columns titles:
+# Assembla Space Key,Assembla Space Name,Assembla Repo Name,BitBucket Repo Name,Bitbucket Repo URL,Assembla Repo URL
+REPO_TRANSLATION_TABLE=data/repo-translation-table.csv
 
 # Mangle external emails not ending with the following suffixes, (must start with a '@') comment line in order to disable.
 # Important: this needs to be restored after the migration so that the user can access the project as usual.
 MANGLE_EXTERNAL_EMAILS_NOT=@company1.com,@company2.com,bedrijf1.nl
 MANGLE_EXTERNAL_EMAILS_NOT_IGNORE=me@gmail.com,joe.doh@hello.nl
 
-JIRA_API_STATUSES=New:To Do,In Progress,Code Review:Review,Test,Test: In Progress:Test,Ready for Deploy:Ready,Re-opened:To Do,Fixed/Closed:Done,Deferred:To Do,Invalid/Duplicate:Done
-
 # Cross project ticket linking
 JIRA_API_SPACE_TO_PROJECT=space1-name:project1-key,space2-name:project2-name
-JIRA_API_RE_TICKET=https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+)...
-JIRA_API_RE_COMMENT=https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+)...
+JIRA_API_RE_TICKET=https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+)(?:\-[^)\]]+)?(?:\?.*\b)?
+JIRA_API_RE_COMMENT=https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+).*?\?comment=(\d+)(?:#comment:\d+)?
 JIRA_API_BROWSE_ISSUE=browse/[:jira-ticket-key]
-JIRA_API_BROWSE_COMMENT=browse/[:jira-ticket-key]?focusedCommentId=...
+JIRA_API_BROWSE_COMMENT=browse/[:jira-ticket-key]?focusedCommentId=:jira-comment-id&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-[:jira-comment-id]
+JIRA_API_STATUSES="New:To Do,In Progress,Blocked,Testable,Ready for Acceptance,In Acceptance Testing,Ready for Deploy,Done,Invalid:Done"
 
 # --- Jira Agile settings --- #
 JIRA_AGILE_HOST=rest/agile/1.0
+
+# --- Confluence settings --- #
+CONFLUENCE_API=https://[:company-name].atlassian.net/wiki/rest/api
+CONFLUENCE_SPACE=space-key
+CONFLUENCE_API_KEY=secret
+CONFLUENCE_EMAIL=kiffin.gish@planet.nl
+CONFLUENCE_PASSWORD=secret
 ```
 
 By using the filter `TICKETS_CREATED_ON` you can limited the tickets to those that were created on or after the date indicated. So for example:
