@@ -41,10 +41,14 @@ users_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-users.csv"
 
 @a_user_id_to_j_user_id = {}
 @a_user_id_to_j_user_name = {}
+@j_user_id_to_j_user_name = {}
 @jira_users.each do |user|
   assembla_user_id = user['assemblaid']
-  @a_user_id_to_j_user_id[assembla_user_id] = user['accountid']
-  @a_user_id_to_j_user_name[assembla_user_id] = user['displayname']
+  jira_user_id = user['accountid']
+  jira_user_name = user['displayname']
+  @a_user_id_to_j_user_id[assembla_user_id] = jira_user_id
+  @a_user_id_to_j_user_name[assembla_user_id] = jira_user_name
+  @j_user_id_to_j_user_name[jira_user_id] = jira_user_name
 end
 
 # TODO
@@ -60,7 +64,7 @@ end
 
 # Move to common.rb -- end
 
-@watchers_not_found = []
+@ignore_watchers = []
 
 # POST /rest/api/2/issue/{issueIdOrKey}/watchers
 def jira_update_watcher(issue_id, watcher, counter)
@@ -72,15 +76,13 @@ def jira_update_watcher(issue_id, watcher, counter)
   begin
     # For a dry-run, comment out the next line
     RestClient::Request.execute(method: :post, url: url, payload: payload, headers: headers)
-    puts "#{percentage}% [#{counter}|#{@total_assembla_tickets}] POST #{url} '#{watcher}' => OK"
+    puts "#{percentage}% [#{counter}|#{@total_assembla_tickets}] POST #{url} id='#{watcher}' name='#{@j_user_id_to_j_user_name[watcher]}' => OK"
     result = true
-  rescue RestClient::ExceptionWithResponse => e
-    message = rest_client_exception(e, 'POST', url, payload)
-    if /404/.match?(message)
-      @watchers_not_found << watcher
-    end
   rescue => e
-    puts "#{percentage}% [#{counter}|#{@total_assembla_tickets}] POST #{url} #{watcher} => NOK (#{e.message})"
+    response = JSON.parse(e.response || {})
+    messages = response['errorMessages'] || []
+    puts "#{percentage}% [#{counter}|#{@total_assembla_tickets}] POST #{url} id='#{watcher}' name='#{@j_user_id_to_j_user_name[watcher]}' => NOK #{e.message} (#{messages.join(' | ')})"
+    @ignore_watchers << watcher
   end
   result
 end
@@ -108,9 +110,8 @@ end
       warning("Unknown watcher for user_id=#{user_id}, assembla_ticket_nr=#{assembla_ticket_nr}, jira_ticket_key=#{jira_ticket_key}")
       next
     end
-    if @watchers_not_found.index(watcher)
+    if @ignore_watchers.index(watcher)
       not_found = true
-      puts "Watcher='#{watcher}' previous (404 Not Found) => SKIP"
     else
       result = jira_update_watcher(jira_ticket_id, watcher, counter)
       @total_updates += 1 if result
@@ -133,6 +134,15 @@ end
     # For a dry-run comment out the next line
     write_csv_file_append(@watchers_tickets_jira_csv, [updates_tickets], counter == 1)
   end
+end
+
+if @ignore_watchers.count
+  puts "\nWatchers which were SKIPPED: #{@ignore_watchers.count}"
+  @ignore_watchers.each do |watcher|
+    puts "id='#{watcher}' name='#{@j_user_id_to_j_user_name[watcher]}'"
+  end
+else
+  puts "\nNo watchers were skipped"
 end
 
 puts "\nTotal updates: #{@total_updates}"
