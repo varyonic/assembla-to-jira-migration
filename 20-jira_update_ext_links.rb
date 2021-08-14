@@ -30,8 +30,7 @@ puts
 @projects = []
 
 puts "\nJIRA_API_SPACE_TO_PROJECT='#{JIRA_API_SPACE_TO_PROJECT}'"
-puts
-JIRA_API_SPACE_TO_PROJECT.split(',').each_with_index do |item, index|
+JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
   space, key = item.split(':')
 
   goodbye("Missing space, item=#{item}, JIRA_API_SPACE_TO_PROJECT=#{JIRA_API_SPACE_TO_PROJECT}") unless space
@@ -54,7 +53,7 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each_with_index do |item, index|
     comment_a_id_to_j_id[comment['assembla_comment_id']] = comment['jira_comment_id']
   end
 
-  puts "#{index + 1}. space='#{space}' key='#{key}' project_name='#{project_name}' tickets: #{tickets.count} comments: #{comments.count}"
+  puts "* space='#{space}' key='#{key}' project_name='#{project_name}' | tickets: #{tickets.count} | comments: #{comments.count}"
 
   @projects << {
     space: space,
@@ -135,17 +134,24 @@ def jira_update_comment_body(issue_key, comment_id, body)
   result
 end
 
+@missing_issue_keys = {}
+
 # Convert the Assembla ticket number to the Jira issue key
 def link_ticket_a_nr_to_j_key(space, assembla_ticket_nr)
   project = get_project_by_space(space)
   goodbye("Cannot get project, space='#{space}'") unless project
   jira_issue_key = project[:ticket_a_nr_to_j_key][assembla_ticket_nr]
   unless jira_issue_key
-    puts("Cannot get jira_issue_key, space='#{space}', assembla_ticket_nr='#{assembla_ticket_nr}'")
+    @missing_issue_keys[space] = {} unless @missing_issue_keys[space]
+    @missing_issue_keys[space][assembla_ticket_nr] = 0 unless @missing_issue_keys[space][assembla_ticket_nr]
+    @missing_issue_keys[space][assembla_ticket_nr] += 1
+    # puts("Cannot get jira_issue_key, space='#{space}', assembla_ticket_nr='#{assembla_ticket_nr}'")
     jira_issue_key = '0'
   end
   jira_issue_key
 end
+
+@missing_comment_ids = {}
 
 # Convert the Assembla comment id to the Jira comment id
 def link_comment_a_id_to_j_id(space, assembla_comment_id)
@@ -154,7 +160,10 @@ def link_comment_a_id_to_j_id(space, assembla_comment_id)
   goodbye("Cannot get project, space='#{space}'") unless project
   jira_comment_id = project[:comment_a_id_to_j_id][assembla_comment_id]
   unless jira_comment_id
-    puts("Cannot get jira_comment_id, space='#{space}', assembla_comment_id='#{assembla_comment_id}'")
+    @missing_comment_ids[space] = {} unless @missing_comment_ids[space]
+    @missing_comment_ids[space][assembla_comment_id] = 0 unless @missing_comment_ids[space][assembla_comment_id]
+    @missing_comment_ids[space][assembla_comment_id] += 1
+    # puts("Cannot get jira_comment_id, space='#{space}', assembla_comment_id='#{assembla_comment_id}'")
     jira_comment_id = '0'
   end
   jira_comment_id
@@ -326,12 +335,6 @@ def collect_list_external_all(type, item)
     end
     lines_after << line_after
     if line_before != line_after
-      if DRY_RUN
-        puts '-----line (before)-----'
-        puts line_before
-        puts '-----line (after)------'
-        puts line_after
-      end
       lines_changed = true
     end
   end
@@ -357,6 +360,26 @@ end
   collect_list_external_all('comment', item)
 end
 
+if @missing_issue_keys.count.nonzero?
+  puts "\nMissing jira issue keys: #{@missing_issue_keys.count}"
+  @missing_issue_keys.each do |space, ids|
+    puts "* space='#{space}'"
+    ids.each do |id, count|
+      puts "  id='#{id}' #{count}"
+    end
+  end
+end
+
+if @missing_comment_ids.count.nonzero?
+  puts "\nMissing jira comment ids: #{@missing_comment_ids.count}"
+  @missing_comment_ids.each do |space, ids|
+    puts "* space='#{space}'"
+    ids.each do |id, count|
+      puts "  id='#{id}' #{count}"
+    end
+  end
+end
+
 puts "\nTotal spaces: #{@spaces.length}"
 @spaces.each do |k, v|
   puts "* #{k} (#{v}) => #{@projects.detect { |project| project[:space] == k } ? 'OK' : 'SKIP'}"
@@ -380,33 +403,25 @@ end
 @all_external_tickets = @list_external_updated.select { |x| x[:type] == 'ticket' }
 @all_external_comments = @list_external_updated.select { |x| x[:type] == 'comment' }
 
-puts "\nTickets:"
+puts "\nTotal tickets: #{@all_external_tickets.count}"
 @all_external_tickets.sort { |x, y| x[:jira_ticket_key] <=> y[:jira_ticket_key] }.each do |ticket|
   issue_key = ticket[:jira_ticket_key]
   description = ticket[:after]
-  if DRY_RUN
-    # puts "\nissue_key='#{issue_key}'"
-    # puts '-----description (before)-----'
-    # puts ticket[:before]
-    # puts '-----description (after)------'
-    # puts description
-  else
-    # jira_update_issue_description(issue_key, description)
-  end
+  puts "jira_update_issue_description() issue_key='#{issue_key}'"
+  puts '-----description (start) -----'
+  puts description
+  puts '-----description (finish) -----'
+  jira_update_issue_description(issue_key, description) unless DRY_RUN
 end
 
-puts "\nComments:"
+puts "\nTotal comments: #{@all_external_comments.count}"
 @all_external_comments.sort { |x, y| x[:jira_comment_id] <=> y[:jira_comment_id] }.each do |comment|
   issue_key = comment[:jira_ticket_key]
   comment_id = comment[:jira_comment_id]
   body = comment[:after]
-  if DRY_RUN
-    # puts "\nissue_key='#{issue_key}' comment_id='#{comment_id}'"
-    # puts '-----body (before)-----'
-    # puts comment[:before]
-    # puts '-----body (after)------'
-    # puts body
-  else
-    # jira_update_comment_body(issue_key, comment_id, body)
-  end
+  puts "jira_update_comment_body() issue_key='#{issue_key}' comment_id='#{comment_id}'"
+  puts '-----body (start)-----'
+  puts body
+  puts '-----body (finish)-----'
+  jira_update_comment_body(issue_key, comment_id, body) unless DRY_RUN
 end
