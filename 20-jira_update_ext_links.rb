@@ -55,13 +55,7 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each_with_index do |item, index|
     comment_a_id_to_j_id[comment['assembla_comment_id']] = comment['jira_comment_id']
   end
 
-  message = "#{index + 1}. space='#{space}' key='#{key}' project_name='#{project_name}' tickets: #{tickets.count} comments: #{comments.count}"
-  if key == JIRA_API_PROJECT_KEY
-    puts "#{message} => SKIP (current project)"
-    next
-  end
-
-  puts message
+  puts "#{index + 1}. space='#{space}' key='#{key}' project_name='#{project_name}' tickets: #{tickets.count} comments: #{comments.count}"
 
   @projects << {
     space: space,
