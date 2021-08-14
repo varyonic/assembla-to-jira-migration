@@ -1,18 +1,44 @@
 # frozen_string_literal: true
 
 load './lib/common.rb'
-load './lib/users-assembla.rb'
 
-@projects_csv = csv_to_array("#{OUTPUT_DIR_JIRA}/jira-projects.csv")
+# Set to true if you just want to run and verify this script without actually updating any external links.
+DRY_RUN = true
+
+if DRY_RUN
+  puts
+  puts '----------------'
+  puts 'DRY RUN enabled!'
+  puts '----------------'
+  puts
+end
+
+@assembla_spaces = csv_to_array("#{OUTPUT_DIR_ASSEMBLA}/spaces.csv")
+@converted_to_name = {}
+@a_space_id_to_wiki_name = {}
+puts "\nTotal assembla spaces: #{@assembla_spaces.count}"
+@assembla_spaces.each do |space|
+  id = space['id']
+  name = space['name']
+  wiki_name = space['wiki_name']
+  @a_space_id_to_wiki_name[id] = wiki_name
+  puts "* id='#{id}' name='#{name}' wiki_name='#{wiki_name}'"
+end
+puts
+
+@all_projects = jira_get_projects
 
 @projects = []
 
-JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
+puts "\nJIRA_API_SPACE_TO_PROJECT='#{JIRA_API_SPACE_TO_PROJECT}'"
+puts
+JIRA_API_SPACE_TO_PROJECT.split(',').each_with_index do |item, index|
   space, key = item.split(':')
+
   goodbye("Missing space, item=#{item}, JIRA_API_SPACE_TO_PROJECT=#{JIRA_API_SPACE_TO_PROJECT}") unless space
   goodbye("Missing key, item=#{item}, JIRA_API_SPACE_TO_PROJECT=#{JIRA_API_SPACE_TO_PROJECT}") unless key
 
-  project = @projects_csv.detect { |p| p['key'] == key }
+  project = @all_projects.detect { |p| p['key'] == key }
   goodbye("Cannot find project with key=#{key}, item=#{item}, JIRA_API_SPACE_TO_PROJECT=#{JIRA_API_SPACE_TO_PROJECT}") unless project
   project_name = project['name']
 
@@ -29,6 +55,14 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
     comment_a_id_to_j_id[comment['assembla_comment_id']] = comment['jira_comment_id']
   end
 
+  message = "#{index + 1}. space='#{space}' key='#{key}' project_name='#{project_name}' tickets: #{tickets.count} comments: #{comments.count}"
+  if key == JIRA_API_PROJECT_KEY
+    puts "#{message} => SKIP (current project)"
+    next
+  end
+
+  puts message
+
   @projects << {
     space: space,
     key: key,
@@ -38,6 +72,7 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
     comment_a_id_to_j_id: comment_a_id_to_j_id
   }
 end
+puts
 
 @project_by_space = {}
 @projects.each do |project|
@@ -65,9 +100,7 @@ end
 def jira_update_issue_description(issue_key, description)
   result = nil
   user_login = @ticket_j_key_to_j_reporter[issue_key]
-  user_login.sub!(/@.*$/,'')
-  user_email = @user_login_to_email[user_login]
-  # headers = headers_user_login(user_login, user_email)
+  user_login.sub!(/@.*$/, '')
   headers = JIRA_HEADERS_ADMIN
   url = "#{URL_JIRA_ISSUES}/#{issue_key}?notifyUsers=false"
   payload = {
@@ -91,8 +124,7 @@ end
 def jira_update_comment_body(issue_key, comment_id, body)
   result = nil
   user_login = @comment_j_key_to_j_login[issue_key]
-  user_login.sub!(/@.*$/,'')
-  # headers = headers_user_login(user_login, user_email)
+  user_login.sub!(/@.*$/, '')
   headers = JIRA_HEADERS_ADMIN
   url = "#{URL_JIRA_ISSUES}/#{issue_key}/comment/#{comment_id}"
   payload = {
@@ -152,6 +184,9 @@ end
 # https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+)-summary?comment=(\d+)
 # https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+)-summary?comment=(\d+)#comment:(\d+)
 
+# TODO: Commits are not supported yet.
+# [[url:https?://.*?\.assembla\.com/spaces/(.*?)/git/commits/[:hash]|[:hash_short]]]
+
 @re_comment = %r{https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+).*?\?comment=(\d+)(?:#comment:\d+)?}
 
 # => /browse/[:jira-ticket-key]?focusedCommentId=[:jira-comment-id]&page=com.atlassian.jira.plugin.system
@@ -167,7 +202,22 @@ def handle_match(match, type, item, line, assembla_ticket_nr, jira_ticket_key, s
 
   replace_with = nil
 
-  project = @project_by_space[space]
+  @project = @project_by_space[space]
+  if @project.nil?
+    # It's possible that in the link rather than using the 'space name', it uses the 'space id' instead, adapt to this
+    # situation also.
+    wiki_name = @a_space_id_to_wiki_name[space]
+    if wiki_name
+      unless @converted_to_name[space]
+        # Only display this message once.
+        puts "id='#{space}' converted to name='#{wiki_name}'"
+        @converted_to_name[space] = true
+      end
+      space = wiki_name
+      @project = @project_by_space[space]
+    end
+    puts "Cannot find project for space='#{space}' => SKIP" if @project.nil?
+  end
 
   @spaces[space] = 0 unless @spaces[space]
   @spaces[space] += 1
@@ -197,7 +247,7 @@ def handle_match(match, type, item, line, assembla_ticket_nr, jira_ticket_key, s
   # assembla_link_comment_id     o          x           o         x
   # jira_link_comment_id         o          x           o         x (calculated)
 
-  if project
+  if @project
     jira_link_ticket_key = link_ticket_a_nr_to_j_key(space, assembla_link_ticket_nr)
     url = JIRA_API_BROWSE_ISSUE.sub('[:jira-ticket-key]', jira_link_ticket_key)
     if is_link_comment
@@ -212,7 +262,7 @@ def handle_match(match, type, item, line, assembla_ticket_nr, jira_ticket_key, s
   line_after = replace_with.nil? ? '' : line.sub(match, replace_with)
 
   @list_external_all << {
-    result: project ? 'OK' : 'SKIP',
+    result: @project ? 'OK' : 'SKIP',
     replace: replace_with.nil? ? 'NO' : 'YES',
     space: space,
     type: type,
@@ -264,12 +314,17 @@ def collect_list_external_all(type, item)
       blk = ->(match) { handle_match(match, type, item, line, assembla_ticket_nr, jira_ticket_key, $1, $2, $3) }
       # IMPORTANT: @re_comment MUST precede @re_ticket
       line_after = line.
-                   gsub(@re_comment, &blk).
-                   gsub(@re_ticket, &blk)
+        gsub(@re_comment, &blk).
+        gsub(@re_ticket, &blk)
     end
     lines_after << line_after
     if line_before != line_after
-      # puts "'#{line_before}' => '#{line_after}'"
+      if DRY_RUN
+        puts '-----line (before)-----'
+        puts line_before
+        puts '-----line (after)------'
+        puts line_after
+      end
       lines_changed = true
     end
   end
@@ -309,7 +364,7 @@ write_csv_file("#{OUTPUT_DIR_JIRA}/jira-links-external-updated.csv", @list_exter
   rows = @list_external_all.select { |row| row[:space] == space }
   puts "\n#{space} => #{rows.length}"
   rows.each do |row|
-    puts "#{row[:type]} '#{row[:match]}' => '#{row[:replace_with]}'"
+    puts "* #{row[:type]} '#{row[:match]}' => '#{row[:replace_with]}'"
   end
 end
 
@@ -318,13 +373,19 @@ end
 @all_external_tickets = @list_external_updated.select { |x| x[:type] == 'ticket' }
 @all_external_comments = @list_external_updated.select { |x| x[:type] == 'comment' }
 
-puts "\nTICKETS:"
+puts "\nTickets:"
 @all_external_tickets.sort { |x, y| x[:jira_ticket_key] <=> y[:jira_ticket_key] }.each do |ticket|
   issue_key = ticket[:jira_ticket_key]
   description = ticket[:after]
-  # puts "\nissue_key='#{issue_key}'"
-  # puts "description='#{description}'"
-  jira_update_issue_description(issue_key, description)
+  if DRY_RUN
+    # puts "\nissue_key='#{issue_key}'"
+    # puts '-----description (before)-----'
+    # puts ticket[:before]
+    # puts '-----description (after)------'
+    # puts description
+  else
+    # jira_update_issue_description(issue_key, description)
+  end
 end
 
 puts "\nComments:"
@@ -332,7 +393,13 @@ puts "\nComments:"
   issue_key = comment[:jira_ticket_key]
   comment_id = comment[:jira_comment_id]
   body = comment[:after]
-  # puts "\nissue_key='#{issue_key}' comment_id='#{comment_id}'"
-  # puts "body='#{body}'"
-  jira_update_comment_body(issue_key, comment_id, body)
+  if DRY_RUN
+    # puts "\nissue_key='#{issue_key}' comment_id='#{comment_id}'"
+    # puts '-----body (before)-----'
+    # puts comment[:before]
+    # puts '-----body (after)------'
+    # puts body
+  else
+    # jira_update_comment_body(issue_key, comment_id, body)
+  end
 end
