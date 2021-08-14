@@ -14,7 +14,6 @@ if DRY_RUN
 end
 
 @assembla_spaces = csv_to_array("#{OUTPUT_DIR_ASSEMBLA}/spaces.csv")
-@converted_to_name = {}
 @a_space_id_to_wiki_name = {}
 puts "\nTotal assembla spaces: #{@assembla_spaces.count}"
 @assembla_spaces.each do |space|
@@ -138,7 +137,7 @@ end
 
 # Convert the Assembla ticket number to the Jira issue key
 def link_ticket_a_nr_to_j_key(space, assembla_ticket_nr)
-  project = @project_by_space[space]
+  project = get_project_by_space(space)
   goodbye("Cannot get project, space='#{space}'") unless project
   jira_issue_key = project[:ticket_a_nr_to_j_key][assembla_ticket_nr]
   unless jira_issue_key
@@ -151,7 +150,7 @@ end
 # Convert the Assembla comment id to the Jira comment id
 def link_comment_a_id_to_j_id(space, assembla_comment_id)
   return nil unless assembla_comment_id
-  project = @project_by_space[space]
+  project = get_project_by_space(space)
   goodbye("Cannot get project, space='#{space}'") unless project
   jira_comment_id = project[:comment_a_id_to_j_id][assembla_comment_id]
   unless jira_comment_id
@@ -159,6 +158,30 @@ def link_comment_a_id_to_j_id(space, assembla_comment_id)
     jira_comment_id = '0'
   end
   jira_comment_id
+end
+
+@converted_spaces = {}
+
+def get_project_by_space(space)
+  project = @project_by_space[space]
+  if project.nil?
+    # It's possible that in the link rather than using the 'space name', it uses the 'space id' instead, adapt to this
+    # situation also.
+    converted_space = @converted_spaces[space]
+    if converted_space
+      project = @project_by_space[converted_space]
+    else
+      wiki_name = @a_space_id_to_wiki_name[space]
+      if wiki_name
+        @converted_spaces[space] = wiki_name
+        puts "get_project_by_space() id='#{space}' converted to wiki_name='#{wiki_name}'"
+        project = @project_by_space[wiki_name]
+      else
+        puts "Cannot find project for space='#{space}' => SKIP"
+      end
+    end
+  end
+  project
 end
 
 # Tickets:
@@ -196,25 +219,15 @@ def handle_match(match, type, item, line, assembla_ticket_nr, jira_ticket_key, s
 
   replace_with = nil
 
-  @project = @project_by_space[space]
-  if @project.nil?
-    # It's possible that in the link rather than using the 'space name', it uses the 'space id' instead, adapt to this
-    # situation also.
-    wiki_name = @a_space_id_to_wiki_name[space]
-    if wiki_name
-      unless @converted_to_name[space]
-        # Only display this message once.
-        puts "id='#{space}' converted to name='#{wiki_name}'"
-        @converted_to_name[space] = true
-      end
-      space = wiki_name
-      @project = @project_by_space[space]
-    end
-    puts "Cannot find project for space='#{space}' => SKIP" if @project.nil?
-  end
+  @project = get_project_by_space(space)
 
-  @spaces[space] = 0 unless @spaces[space]
-  @spaces[space] += 1
+  # IMPORTANT: Make sure that converted space is used here.
+  if @project
+    space = @project[:space]
+
+    @spaces[space] = 0 unless @spaces[space]
+    @spaces[space] += 1
+  end
 
   is_link_comment = !assembla_link_comment_id.nil?
 
