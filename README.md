@@ -1010,6 +1010,22 @@ comment => /browse/[JIRA_ISSUE_KEY]?focusedCommentId=[JIRA_COMMENT_ID]&page= \
   com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-[JIRA_COMMENT_ID]
 ```
 
+Experimental. For links that refer to COMMITS, we have:
+
+```
+# https?://.*?\.assembla\.com/spaces/(.*?)/git/commits/[:hash]
+@re_commit = %r{https?://.*?\.assembla\.com/spaces/(.*?)/git/commits/([a-z0-9]+)}
+
+# => https://bitbucket.org/[:company-name]/[[REPO-NAME]]/commits/[:commit_hash]'
+```
+
+This script should be used carefully as it will cause irreversible updates. Check it out first to make sure that it is executing
+as expected by running the following command:
+
+```
+$ ./jira_dry_run_update_ext_links.sh >jira_dry_run_update_ext_links.log 2>&1
+```
+
 Execute the following command to update all external links:
 
 ```

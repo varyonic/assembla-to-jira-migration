@@ -337,7 +337,6 @@ end
 
 # => /browse/[:jira-ticket-key]?focusedCommentId=[:jira-comment-id]
 
-# TODO: Commits are not supported yet.
 # https?://.*?\.assembla\.com/spaces/(.*?)/git/commits/[:hash]
 @re_commit = %r{https?://.*?\.assembla\.com/spaces/(.*?)/git/commits/([a-z0-9]+)}
 
