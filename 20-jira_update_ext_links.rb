@@ -348,14 +348,19 @@ end
 @spaces = {}
 
 @cannot_find_commit_url = {}
+@matched_commit_urls = []
 
 def handle_match_commit(match, type, item, line, assembla_ticket_nr, jira_ticket_key, assembla_repo_url, hash)
-  puts "handle_match_commit() match='#{match}' type='#{type}' line='#{line}' assembla_ticket_nr='#{assembla_ticket_nr}' jira_ticket_key='#{jira_ticket_key}' assembla_repo_url='#{assembla_repo_url}' hash='#{hash}'"
+  # puts "handle_match_commit() match='#{match}' type='#{type}' line='#{line}' assembla_ticket_nr='#{assembla_ticket_nr}' jira_ticket_key='#{jira_ticket_key}' assembla_repo_url='#{assembla_repo_url}' hash='#{hash}'"
   replace_with = match
   if BITBUCKET_REPO_URL
     to = @bitbucket_from_to_url[assembla_repo_url]
     if to
       replace_with = "#{BITBUCKET_REPO_URL.sub('[[REPO-NAME]]', to)}/#{hash}"
+      @matched_commit_urls << {
+        assembla_repo_url: assembla_repo_url,
+        replace_with: replace_with
+      }
     else
       unless @cannot_find_commit_url[assembla_repo_url]
         puts "Cannot find a bitbucket url for assembla_repo_url='#{assembla_repo_url}' => SKIP"
@@ -517,6 +522,15 @@ end
 
 @comments_jira.each do |item|
   collect_list_external_all('comment', item)
+end
+
+if @matched_commit_urls.count.nonzero?
+  puts "\nMatched commit urls: #{@matched_commit_urls.count}"
+  @matched_commit_urls.each do |item|
+    from = item[:assembla_repo_url]
+    to = item[:replace_with]
+    puts "* '#{from}' => '#{to}'"
+  end
 end
 
 if @missing_issue_keys.count.nonzero?
