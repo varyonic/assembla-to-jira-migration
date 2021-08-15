@@ -244,7 +244,7 @@ BITBUCKET_REPO_URL='https://bitbucket.org/[:company-path]/[[REPO-NAME]]/commits'
 BITBUCKET_REPO_TABLE=from_repos1|to_repos1,from_repos2|to_repos2,...,from_reposn|to_reposn
 # Or you can provide a csv file to read in with the following columns titles:
 # Assembla Space Key,Assembla Space Name,Assembla Repo Name,BitBucket Repo Name,Bitbucket Repo URL,Assembla Repo URL
-REPO_TRANSLATION_TABLE=data/repo-translation-table.csv
+BITBUCKET_REPO_CONVERSIONS=data/bitbucket-repo-conversions.csv
 
 # Mangle external emails not ending with the following suffixes, (must start with a '@') comment line in order to disable.
 # Important: this needs to be restored after the migration so that the user can access the project as usual.
