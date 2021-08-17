@@ -590,7 +590,7 @@ puts "\nTotal tickets: #{@all_external_tickets.count}"
   puts '-----description (start) -----'
   puts description
   puts '-----description (finish) -----'
-  # jira_update_issue_description(issue_key, description) unless @dry_run
+  jira_update_issue_description(issue_key, description) unless @dry_run
 end
 
 puts "\nTotal comments: #{@all_external_comments.count}"
@@ -602,5 +602,14 @@ puts "\nTotal comments: #{@all_external_comments.count}"
   puts '-----body (start)-----'
   puts body
   puts '-----body (finish)-----'
-  # jira_update_comment_body(issue_key, comment_id, body) unless @dry_run
+  jira_update_comment_body(issue_key, comment_id, body) unless @dry_run
+end
+
+if @dry_run
+  puts
+  puts 'IMPORTANT!'
+  puts 'Please note that DRY RUN has been enabled enabled'
+  puts "For the real McCoy, call this script with 'dry_run=false'"
+  puts 'But make sure you are sure!'
+  puts
 end
