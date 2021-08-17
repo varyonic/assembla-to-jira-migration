@@ -608,7 +608,7 @@ end
 if @dry_run
   puts
   puts 'IMPORTANT!'
-  puts 'Please note that DRY RUN has been enabled enabled'
+  puts 'Please note that DRY RUN has been enabled'
   puts "For the real McCoy, call this script with 'dry_run=false'"
   puts 'But make sure you are sure!'
   puts
