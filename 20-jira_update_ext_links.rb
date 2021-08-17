@@ -154,6 +154,7 @@ end
 puts
 
 @all_projects = jira_get_projects
+@all_a_id_to_j_id = {}
 
 @projects = []
 
@@ -168,12 +169,22 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
   goodbye("Cannot find project with key=#{key}, item=#{item}, JIRA_API_SPACE_TO_PROJECT=#{JIRA_API_SPACE_TO_PROJECT}") unless project
   project_name = project['name']
 
-  tickets = csv_to_array("#{OUTPUT_DIR_JIRA}/jira-tickets.csv").select { |ticket| ticket['result'] == 'OK' }
-  comments = csv_to_array("#{OUTPUT_DIR_JIRA}/jira-comments.csv")
+  output_dir = output_dir_jira(space)
+
+  csv_tickets = "#{output_dir}/jira-tickets.csv"
+  goodbye("Cannot find file '#{csv_tickets}'") unless File.exist?(csv_tickets)
+  tickets = csv_to_array(csv_tickets).select { |ticket| ticket['result'] == 'OK' }
+
+  csv_comments = "#{output_dir}/jira-comments.csv"
+  goodbye("Cannot find file '#{csv_comments}'") unless File.exist?(csv_comments)
+  comments = csv_to_array(csv_comments)
 
   ticket_a_nr_to_j_key = {}
   tickets.each do |ticket|
+    assembla_ticket_id = ticket['assembla_ticket_id']
+    jira_ticket_id = ticket['jira_ticket_id']
     ticket_a_nr_to_j_key[ticket['assembla_ticket_number']] = ticket['jira_ticket_key']
+    @all_a_id_to_j_id[assembla_ticket_id] = jira_ticket_id
   end
 
   comment_a_id_to_j_id = {}
@@ -187,7 +198,7 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
     space: space,
     key: key,
     name: project_name,
-    output_dir: OUTPUT_DIR_JIRA,
+    output_dir: output_dir,
     ticket_a_nr_to_j_key: ticket_a_nr_to_j_key,
     comment_a_id_to_j_id: comment_a_id_to_j_id
   }
@@ -276,6 +287,22 @@ def link_ticket_a_nr_to_j_key(space, assembla_ticket_nr)
     jira_issue_key = '0'
   end
   jira_issue_key
+end
+
+@missing_issue_ids = {}
+
+# Convert the Assembla ticket id to the associated Jira issue id
+def link_ticket_a_id_to_j_id(assembla_ticket_id)
+  jira_issue_id = nil
+  @projects.each do |project|
+    next unless jira_issue_id.nil?
+    jira_issue_id = project[:ticket_a_id_to_j_id][assembla_ticket_id]
+  end
+  unless jira_issue_id
+    @missing_issue_ids[assembla_ticket_id] = 0 unless @missing_issue_ids[assembla_ticket_id]
+    @missing_issue_ids[assembla_ticket_id] += 1
+  end
+  jira_issue_id
 end
 
 @missing_comment_ids = {}
@@ -494,9 +521,9 @@ def collect_list_external_all(type, item)
           info += " assembla_comment_id='#{assembla_comment_id}' jira_comment_id='#{jira_comment_id}'"
         end
         info += " line='#{index + 1}'"
-        puts "CCC: -----#{info}-----"
-        puts "CCC: #{line_before}"
-        puts "CCC: #{line_after}"
+        puts "DIFF -----#{info}-----"
+        puts "DIFF #{line_before}"
+        puts "DIFF #{line_after}"
       end
       lines_changed = true
     end
@@ -539,6 +566,13 @@ if @missing_issue_keys.count.nonzero?
     ids.each do |id, count|
       puts "  id='#{id}' #{count}"
     end
+  end
+end
+
+if @missing_issue_ids.count.nonzero?
+  puts "\nMissing jira issue ids: #{@missing_issue_ids.count}"
+  @missing_issue_ids.each do |id, count|
+    puts "* id='#{id}' (#{count})"
   end
 end
 
@@ -605,6 +639,190 @@ puts "\nTotal comments: #{@all_external_comments.count}"
   jira_update_comment_body(issue_key, comment_id, body) unless @dry_run
 end
 
+### --- LINK ISSUES --- #
+
+# TODO: Copied from 18-jira_update_associations.rb, need to refactor
+
+# Jira issue link types and tickets
+issuelink_types_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-issuelink-types.csv"
+@issuelink_types_jira = csv_to_array(issuelink_types_jira_csv)
+
+# Filter for ok tickets only
+@is_ticket_id = {}
+@tickets_jira.each do |ticket|
+  @is_ticket_id[ticket['assembla_ticket_id']] = true
+end
+
+# Convert assembla_ticket_id to jira_ticket
+@assembla_id_to_jira = {}
+@jira_id_to_login = {}
+@tickets_jira.each do |ticket|
+  jira_id = ticket['jira_ticket_id']
+  assembla_id = ticket['assembla_ticket_id']
+  @assembla_id_to_jira[assembla_id] = jira_id
+  @jira_id_to_login[jira_id] = ticket['reporter_name']
+end
+
+# Assembla tickets
+# id,ticket1_id,ticket2_id,relationship,created_at,ticket_id,ticket_number,relationship_name
+associations_csv = "#{OUTPUT_DIR_ASSEMBLA}/ticket-associations.csv"
+@associations_assembla = csv_to_array(associations_csv)
+
+# --- Filter by date if TICKET_CREATED_ON is defined --- #
+tickets_created_on = get_tickets_created_on
+
+if tickets_created_on
+  puts "Filter newer than: #{tickets_created_on}"
+  @associations_assembla.select! { |association| @assembla_id_to_jira[association['ticket1_id']] && @assembla_id_to_jira[association['ticket2_id']] }
+end
+
+@total_assembla_associations = @associations_assembla.length
+puts "Total Assembla associations: #{@total_assembla_associations}"
+
+# Filter for ok tickets only
+@associations_assembla.select! { |c| @is_ticket_id[c['ticket_id']] }
+
+@total_assembla_associations = @associations_assembla.length
+puts "Total Assembla associations after: #{@total_assembla_associations}"
+
+# Collect ticket statuses
+@relationship_names = {}
+@relationship_tickets = {}
+@associations_assembla.each do |association|
+  ticket_id = association['ticket_id'].to_i
+  ticket1_id = association['ticket1_id'].to_i
+  ticket2_id = association['ticket2_id'].to_i
+  if ticket1_id != ticket_id && ticket2_id != ticket_id
+    goodbye("ticket1_id (#{ticket1_id}) != ticket_id (#{ticket_id}) && ticket2_id (#{ticket2_id}) != ticket_id (#{ticket_id})")
+  end
+  name = association['relationship_name']
+  if @relationship_names[name].nil?
+    @relationship_names[name] = 0
+  else
+    @relationship_names[name] += 1
+  end
+  @relationship_tickets[ticket_id] = { associations: {} } if @relationship_tickets[ticket_id].nil?
+  @relationship_tickets[ticket_id][:associations][name] = [] if @relationship_tickets[ticket_id][:associations][name].nil?
+  @relationship_tickets[ticket_id][:associations][name] << {
+    ticket: ticket1_id == ticket_id ? 2 : 1,
+    ticket_id: ticket1_id == ticket_id ? ticket2_id : ticket1_id
+  }
+end
+
+puts "\nTotal issue link types Jira: #{@issuelink_types_jira.length}"
+@issuelink_types_jira.each do |issuelink_type|
+  puts "* #{issuelink_type['name']}"
+end
+
+puts "\nTotal relationship names Assembla: #{@relationship_names.keys.length}"
+@relationship_names.each do |item|
+  puts "* #{item[0]}: #{item[1]}"
+end
+
+puts "\nTotal tickets: #{@relationship_tickets.keys.length}"
+
+# POST /rest/api/2/issueLink
+def jira_update_association(name, ticket1_id, ticket2_id, ticket_id, counter)
+  result = nil
+  user_login = @jira_id_to_login[ticket_id]
+  user_login.sub!(/@.*$/, '')
+  # headers = headers_user_login(user_login, user_email)
+  headers = JIRA_HEADERS_ADMIN
+  name.capitalize!
+  name = 'Relates' if name == 'Related'
+  name = 'Blocks' if name == 'Block'
+  url = URL_JIRA_ISSUELINKS
+  payload = {
+    type: {
+      name: name
+    },
+    inwardIssue: {
+      id: "#{ticket1_id}"
+    },
+    outwardIssue: {
+      id: "#{ticket2_id}"
+    }
+  }.to_json
+  percentage = ((counter * 100) / @total_assembla_associations).round.to_s.rjust(3)
+  begin
+    RestClient::Request.execute(method: :post, url: url, payload: payload, headers: headers)
+    puts "#{percentage}% [#{counter}|#{@total_assembla_associations}] PUT #{url} '#{name}' => OK"
+    result = true
+  rescue RestClient::ExceptionWithResponse => e
+    rest_client_exception(e, 'PUT', url, payload)
+  rescue => e
+    puts "#{percentage}% [#{counter}|#{@total_assembla_associations}] PUT #{url} #{payload.inspect} => NOK (#{e.message})"
+  end
+  result
+end
+
+@total_updates = 0
+@associations_tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets-associations-ext-links.csv"
+
+@first_time = true
+# Here we only want to handle the external issue associations since the known issues have already
+# been handled in the previous '18-jira_update_associations.rb' script call.
+@associations_assembla.each_with_index do |association, index|
+  counter = index + 1
+  name = association['relationship_name']
+  skip = ASSEMBLA_SKIP_ASSOCIATIONS.include?(name.split.first)
+  is_external = false
+  unknown1 = false
+  unknown2 = false
+  assembla_ticket1_id = association['ticket1_id']
+  assembla_ticket2_id = association['ticket2_id']
+  assembla_ticket_id = association['ticket_id']
+  jira_ticket1_id = @assembla_id_to_jira[assembla_ticket1_id]
+  jira_ticket2_id = @assembla_id_to_jira[assembla_ticket2_id]
+  jira_ticket_id = @assembla_id_to_jira[assembla_ticket_id]
+  if jira_ticket1_id.to_i.zero?
+    jira_ticket1_id = @all_a_id_to_j_id[assembla_ticket1_id]
+    is_external = true
+    if jira_ticket1_id.nil?
+      puts "Cannot find jira_ticket1_id for association_name='#{name}' assembla_ticket1_id='#{assembla_ticket1_id}' => SKIP"
+      unknown1 = true
+    end
+  end
+  if jira_ticket2_id.to_i.zero?
+    jira_ticket2_id = @all_a_id_to_j_id[assembla_ticket2_id]
+    is_external = true
+    if jira_ticket2_id.nil?
+      puts "Cannot find jira_ticket2_id for association_name='#{name}' assembla_ticket2_id='#{assembla_ticket2_id}' => SKIP"
+      unknown2 = true
+    end
+  end
+  return if unknown1 || unknown2
+  if is_external
+    if @dry_run
+      puts "Call jira_update_association() name='#{name}' jira_ticket1_id='#{jira_ticket1_id}' jira_ticket2_id='#{jira_ticket2_id}' jira_ticket_id='#{jira_ticket2_id}' counter='#{counter}'"
+    else
+      results = skip ? nil : jira_update_association(name, jira_ticket1_id, jira_ticket2_id, jira_ticket_id, counter) unless skip
+      @total_updates += 1 if results
+      result = if skip
+                 'SKIP'
+               elsif unknown1 || unknown2
+                 'UNKNOWN'
+               elsif results
+                 'OK'
+               else
+                 'NOK'
+               end
+      associations_ticket = {
+        result: result,
+        assembla_ticket1_id: assembla_ticket1_id,
+        jira_ticket1_id: jira_ticket1_id,
+        assembla_ticket2_id: assembla_ticket2_id,
+        jira_ticket2_id: jira_ticket2_id,
+        relationship_name: name.capitalize
+      }
+      write_csv_file_append(@associations_tickets_jira_csv, [associations_ticket], @first_time)
+      @first_time = false
+    end
+  else
+    puts "SKIP internal name='#{name}' jira_ticket1_id='#{jira_ticket1_id}' jira_ticket2_id='#{jira_ticket2_id}' jira_ticket_id='#{jira_ticket2_id}'" if @dry_run
+  end
+end
+
 if @dry_run
   puts
   puts 'IMPORTANT!'
@@ -612,4 +830,7 @@ if @dry_run
   puts "For the real McCoy, call this script with 'dry_run=false'"
   puts 'But make sure you are sure!'
   puts
+else
+  puts "\nTotal updates: #{@total_updates}"
+  puts @associations_tickets_jira_csv
 end
