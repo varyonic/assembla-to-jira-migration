@@ -3,23 +3,27 @@
 load './lib/common.rb'
 load './lib/users-jira.rb'
 
-# Set to true if you just want to run and verify this script without actually importing any comments.
-DRY_RUN = false
+# Set to true if you just want to run and verify this script without actually updating any external links.
+@dry_run = true
 
-def dry_run_enabled(show)
-  if DRY_RUN && show
-    puts
-    puts '----------------'
-    puts 'DRY RUN enabled!'
-    puts '----------------'
-    puts
-  end
-  DRY_RUN
+# You can also pass a parameter 'dry_run=true|false'
+if ARGV.length == 1
+  goodbye("Invalid ARGV0='#{ARGV[0]}', must be 'dry_run=true|false'") unless /^dry_run=(true|false)$/i.match?(ARGV[0])
+  @dry_run = ARGV[0].split('=')[1].casecmp('true') == 0
+  puts "Detected ARGV0='#{ARGV[0]}' => #{@dry_run}"
 end
 
-dry_run_enabled(true)
+if @dry_run
+  puts
+  puts '----------------'
+  puts 'DRY RUN enabled!'
+  puts '----------------'
+  puts
+end
 
 @repo_table = {}
+@missing_repos = {}
+
 def insert_bitbucket_repo_link(body)
   re = /Commit: \[\[(?:.*):([0-9a-f]+)\|(.*):(?:.*)\]\]/i
   if body&.match?(/^Commit\: /)
@@ -30,6 +34,9 @@ def insert_bitbucket_repo_link(body)
       from = m[2]
       to = @repo_table[from]
       if to.nil?
+        # Keep track of missing repos and display at end.
+        @missing_repos[from] = 0 unless @missing_repos[from].nil?
+        @missing_repos[from] += 1
         body.sub!(re, match + "\nERROR: Cannot find repo entry for '#{from}'")
       else
         url = "#{BITBUCKET_REPO_URL.sub('[[REPO-NAME]]', to)}/#{commit_hash}"
@@ -147,7 +154,7 @@ end
 
 # Jira attachments (images)
 attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
-if File.exists?(attachments_jira_csv)
+if File.exist?(attachments_jira_csv)
   @attachments_jira = csv_to_array(attachments_jira_csv)
 else
   puts "File '#{attachments_jira_csv}' is missing, no attachments detected."
@@ -223,11 +230,10 @@ def jira_create_comment(issue_id, user_id, comment, counter)
     body: body
   }.to_json
   percentage = ((counter * 100) / @comments_total).round.to_s.rjust(3)
-  if dry_run_enabled(false)
-    puts "issue_id='#{issue_id}' user_login='#{user_login}'"
-    puts '-----'
+  if @dry_run
+    puts "----- jira_create_comment() issue_id='#{issue_id}' user_login='#{user_login}' comment_id='#{comment['id']}', counter='#{counter}' -----" if @dry_run
     puts body
-    puts '-----'
+    puts '----- end -----'
     return
   end
   begin
@@ -288,7 +294,7 @@ end
     result = jira_create_comment(issue_id, user_id, comment, counter)
   end
 
-  next if dry_run_enabled(false)
+  next if @dry_run
 
   if result
     comment_id = result['id']
@@ -316,15 +322,28 @@ end
   end
 end
 
-return if dry_run_enabled(true)
+unless @missing_repos.count.zero?
+  puts "\nWARNING: The following repos were detected but NOT found in BITBUCKET_REPO_TABLE"
+  @missing_repos.each do |repo, count|
+    puts "* #{repo} (#{count})"
+  end
+end
 
-puts "Total imported: #{@total_imported}"
-puts @comments_jira_csv
+if @dry_run
+  puts
+  puts 'IMPORTANT!'
+  puts 'Please note that DRY RUN has been enabled'
+  puts "For the real McCoy, call this script with 'dry_run=false'"
+  puts 'But make sure you are sure!'
+  puts
+else
+  puts "Total imported: #{@total_imported}"
+  puts @comments_jira_csv
 
-puts "Total diffs: #{@total_comments_diffs}"
-puts @comments_diffs_jira_csv
+  puts "Total diffs: #{@total_comments_diffs}"
+  puts @comments_diffs_jira_csv
 
-puts "Total NOK: #{@total_imported_nok}"
-puts @comments_jira_nok_csv
-
+  puts "Total NOK: #{@total_imported_nok}"
+  puts @comments_jira_nok_csv
+end
 
