@@ -160,6 +160,8 @@ puts
 
 puts "\nJIRA_API_SPACE_TO_PROJECT='#{JIRA_API_SPACE_TO_PROJECT}'"
 JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
+
+  @cannot_find_comments = ''
   space, key = item.split(':')
 
   goodbye("Missing space, item=#{item}, JIRA_API_SPACE_TO_PROJECT=#{JIRA_API_SPACE_TO_PROJECT}") unless space
@@ -172,12 +174,16 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
   output_dir = output_dir_jira(space)
 
   csv_tickets = "#{output_dir}/jira-tickets.csv"
-  goodbye("Cannot find file '#{csv_tickets}'") unless File.exist?(csv_tickets)
+  goodbye("Cannot find file '#{csv_tickets}' for space='#{space}' key='#{key}'") unless File.exist?(csv_tickets)
   tickets = csv_to_array(csv_tickets).select { |ticket| ticket['result'] == 'OK' }
 
   csv_comments = "#{output_dir}/jira-comments.csv"
-  goodbye("Cannot find file '#{csv_comments}'") unless File.exist?(csv_comments)
-  comments = csv_to_array(csv_comments)
+  if File.exist?(csv_comments)
+    comments = csv_to_array(csv_comments)
+  else
+    comments = []
+    @cannot_find_comments = " (cannot find file '#{csv_comments}', will continue anyway)"
+  end
 
   ticket_a_nr_to_j_key = {}
   tickets.each do |ticket|
@@ -192,7 +198,7 @@ JIRA_API_SPACE_TO_PROJECT.split(',').each do |item|
     comment_a_id_to_j_id[comment['assembla_comment_id']] = comment['jira_comment_id']
   end
 
-  puts "* space='#{space}' key='#{key}' project_name='#{project_name}' | tickets: #{tickets.count} | comments: #{comments.count}"
+  puts "* space='#{space}' key='#{key}' project_name='#{project_name}' | tickets: #{tickets.count} | comments: #{comments.count}#{@cannot_find_comments}"
 
   @projects << {
     space: space,
