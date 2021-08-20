@@ -5,11 +5,12 @@ load './lib/common.rb'
 ALLOWED_ARGS = %w(space_tools users user_roles tags milestones/all tickets/statuses tickets/custom_fields documents wiki_pages tickets).freeze
 
 if ARGV[0].nil?
-  puts "Export all: #{ALLOWED_ARGS.join(', ')}"
+  puts "\nExport all: #{ALLOWED_ARGS.join(', ')}"
 else
   goodbye("Invalid arg='#{ARGV[0]}', must be one of: #{ALLOWED_ARGS.join(', ')}") unless ALLOWED_ARGS.include?(ARGV[0])
   puts "Export only: #{ARGV[0]}"
 end
+puts
 
 ITEMS = [
   { name: 'space_tools' },
@@ -57,6 +58,15 @@ else
   items = [ ITEMS.find { |item| item[:name] == ARGV[0] } ]
 end
 
-write_csv_file("#{OUTPUT_DIR_ASSEMBLA}/spaces.csv", assembla_get_spaces)
+spaces = assembla_get_spaces
+
+# Make sure that the space name is known
+unless spaces.detect{ |space| space['name'] == ASSEMBLA_SPACE}
+  goodbye("Unknown ASSEMBLA_SPACE='#{ASSEMBLA_SPACE}' must be one of the following:\n#{spaces.map{ |space| space['name']}}")
+end
+
+puts "\nFound ASSEMBLA_SPACE='#{ASSEMBLA_SPACE}'"
+
+write_csv_file("#{OUTPUT_DIR_ASSEMBLA}/spaces.csv", spaces)
 
 export_assembla_items(items)
