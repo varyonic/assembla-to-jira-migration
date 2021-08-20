@@ -104,7 +104,14 @@ tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets.csv"
 @tickets_jira = csv_to_array(tickets_jira_csv).select { |ticket| ticket['result'] == 'OK' }
 comments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-comments.csv"
 @comments_jira = csv_to_array(comments_jira_csv)
+
+
+
 attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-import-ok.csv"
+unless File.exist?(attachments_jira_csv)
+  puts "Cannot find file '#{attachments_jira_csv}', assuming that there are no downloaded files for this project."
+  exit
+end
 @attachments_jira = csv_to_array(attachments_jira_csv)
 
 @ticket_a_nr_to_j_key = {}
