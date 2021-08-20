@@ -36,6 +36,12 @@ end
 # Downloaded attachments
 # created_at,created_by,assembla_attachment_id,assembla_ticket_id,filename,content_type
 downloaded_attachments_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
+
+unless File.exist?(downloaded_attachments_csv)
+  puts "Cannot find file '#{downloaded_attachments_csv}', assuming that there are no downloaded files for this project."
+  exit
+end
+
 @downloaded_attachments = csv_to_array(downloaded_attachments_csv)
 @total_attachments = @downloaded_attachments.length
 
