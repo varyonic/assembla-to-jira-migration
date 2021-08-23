@@ -4,10 +4,17 @@ load './lib/common.rb'
 
 load './lib/users-jira.rb'
 
-# Set to true if you want to execute a dry run without calling Jira create user.
-DRY_RUN = false
+# Set to true if you just want to run and verify this script without actually updating any external links.
+@dry_run = true
 
-if DRY_RUN
+# You can also pass a parameter 'dry_run=true|false'
+if ARGV.length == 1
+  goodbye("Invalid ARGV0='#{ARGV[0]}', must be 'dry_run=true|false'") unless /^dry_run=(true|false)$/i.match?(ARGV[0])
+  @dry_run = ARGV[0].split('=')[1].casecmp('true') == 0
+  puts "Detected ARGV0='#{ARGV[0]}' => #{@dry_run}"
+end
+
+if @dry_run
   puts
   puts '----------------'
   puts 'DRY RUN enabled!'
@@ -66,15 +73,30 @@ users_assembla_csv = "#{OUTPUT_DIR_ASSEMBLA}/report-users.csv"
 @users_assembla = csv_to_array(users_assembla_csv)
 goodbye('Cannot get users!') unless @users_assembla.length.nonzero?
 
+puts "\nTotal Assembla users: #{@users_assembla.count}"
+@users_assembla.sort { |a, b| a['name'] <=> b['name'] }.each do |user|
+  puts "* name='#{user['name']}' id='#{user['id']}' login='#{user['login']}' email='#{user['email']}'"
+end
+puts
+
 # name,key,accountId,emailAddress,displayName,active
 # @existing_users_jira = jira_get_users
 
 # accountId,displayName,active,accountType
-@existing_users_jira = jira_get_all_users
+@all_users_jira = jira_get_all_users.select{ |user| user['accountType'] == 'atlassian'}
 
-puts "\nExistings users: #{@existing_users_jira.length}"
+@unknown_users_jira = @all_users_jira.select { |c| c['displayName'].match?(/^Unknown #\d+$/) }.sort do |a, b|
+  a['displayName'].match(/^Unknown #(\d+)$/)[1].to_i <=> b['displayName'].match(/^Unknown #(\d+)$/)[1].to_i
+end
+@existing_users_jira = @all_users_jira.reject { |c| c['displayName'].match?(/^Unknown #\d+$/) }.sort { |a, b| a['displayName'] <=> b['displayName'] }
+puts "\nExisting Jira users: #{@existing_users_jira.count}"
 @existing_users_jira.each do |u|
-  puts "accountId='#{u['accountId']}' displayName='#{u['displayName']}' active='#{u['active']}' accountType='#{u['accountType']}'"
+  puts "* displayName='#{u['displayName']}' accountId='#{u['accountId']}' active='#{u['active']}' accountType='#{u['accountType']}'"
+end
+
+puts "\nUnknown Jira users: #{@unknown_users_jira.count}"
+@unknown_users_jira.each do |u|
+  puts "* displayName='#{u['displayName']}' accountId='#{u['accountId']}' active='#{u['active']}' accountType='#{u['accountType']}'"
 end
 
 @users_jira = []
@@ -85,6 +107,8 @@ end
 # email    => emailAddress
 # name     => displayName
 
+@users_skip = []
+@users_create = []
 puts
 @users_assembla.each do |user|
   username = user['login'].sub(/@.*$/, '')
@@ -95,43 +119,71 @@ puts
   email = user['email']
   if email.nil? || email.length.zero?
     email = "#{username}@#{JIRA_API_DEFAULT_EMAIL}"
-    puts "username='#{username}' does NOT have a valid email, changed it to '#{email}'"
+    puts "*** username='#{username}' does NOT have a valid email '#{user['email']}', changed it to '#{email}'"
     user['email'] = email
   end
-  u1 = jira_get_user_by_username(@existing_users_jira, username)
+  u1 = jira_get_user_by_assembla_user(@all_users_jira, user)
   # u1 = jira_get_user_by_email(@existing_users_jira, email)
   if u1
     # User exists so add to list
-    puts "username='#{username}', email='#{email}' already exists => SKIP"
-    @users_jira << { 'assemblaId': user['id'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }.merge(u1)
+    next_user = { 'assemblaId': user['id'], 'assemblaName': user['name'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }.merge(u1)
+    @users_skip << next_user
+    @users_jira << next_user
   else
     # User does not exist so create if possible and add to list
-    puts "username='#{username}', email='#{email}' not found => CREATE"
+    # puts "username='#{username}', email='#{email}' not found => CREATE"
 
     # If enabled, we need to mangle the emails of any external users so that they
     # will not be notified during creation (because the email is invalid)
     # Important: this needs to be restored after the migration so that the user
     # can access the project as usual.
-    puts "email='#{email}'"
+    # puts "email='#{email}'"
     suffix_with_at = '@' + email.split('@')[1]
     unless MANGLE_EXTERNAL_EMAILS_NOT.include?(suffix_with_at.downcase)
       email_mangled = mangle_email(email)
       if email_mangled != user['email']
-        puts "*** Mangled user email: #{email_mangled}"
+        puts "*** Mangled user email: #{user['email']} => #{email_mangled}"
         user['email'] = email_mangled
       end
     end
+    @users_create << { 'assemblaId': user['id'], 'assemblaName': user['name'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }
+  end
+end
 
-    unless DRY_RUN
-      u2 = jira_create_user(user)
-      if u2
-        @users_jira << { 'assemblaId': user['id'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }.merge(u2)
-      end
+puts "\nTotal users who already exist (will be skipped): #{@users_skip.count}"
+@users_skip.each do |user|
+  puts "* Assembla: name='#{user[:assemblaName]}' id='#{user[:assemblaId]}' login='#{user[:assemblaLogin]}' email='#{user[:emailAddress]}'"
+  puts "  Jira:     name='#{user['displayName']}' id='#{user['accountId']}' active='#{user['active']}' accountType='#{user['accountType']}'"
+end
+
+puts "\nTotal users to be created: #{@users_create.count}"
+@users_create.each do |user|
+  puts "* Assembla: name='#{user[:assemblaName]}' id='#{user[:assemblaId]}' login='#{user[:assemblaLogin]}' email='#{user[:emailAddress]}'"
+end
+puts
+
+unless @dry_run
+  @users_create.each do |user|
+    u2 = jira_create_user(user)
+    if u2
+      @users_jira << { 'assemblaId': user['id'], 'assemblaName': user['name'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }.merge(u2)
     end
   end
 end
 
-unless DRY_RUN
+puts
+if @dry_run
+  puts 'IMPORTANT!'
+  puts 'Please note that DRY RUN has been enabled'
+  puts "For the real McCoy, call this script with 'dry_run=false'"
+  puts 'But make sure you are sure!'
+  puts
+else
+  puts "Total Jira users: #{@user_jira.count}:"
+  @users_jira.each do |user|
+    puts "* Assembla: name='#{user['name']}' id='#{user['assemblaid']}' login='#{user['assemblalogin']}' email='#{user['emailAddress']}'"
+    puts "* Jira:     id='#{user['accountid']}' active='#{user['active']}'"
+  end
   # jira-users.csv => assemblaid,assemblalogin,emailAddress,accountid,name,displayname,active
   jira_users_csv = "#{OUTPUT_DIR_JIRA}/jira-users.csv"
   write_csv_file(jira_users_csv, @users_jira)
@@ -143,3 +195,4 @@ unless DRY_RUN
     puts "\nIMPORTANT: The following users MUST to be activated before you continue: #{inactive_users.map { |user| user['name'] }.join(', ')}"
   end
 end
+

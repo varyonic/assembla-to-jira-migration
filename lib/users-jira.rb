@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-
-def jira_get_user_by_username(users_jira, username)
-  return users_jira.detect { |user| user['name'] == username }
+# Find jira user with same display name as assembla user name
+def jira_get_user_by_assembla_user(users_jira, user_assembla)
+  assembla_name = user_assembla['name']
+  users_jira.detect { |user_jira| user_jira['displayName'] == assembla_name }
 end
 
 # No longer supported.
