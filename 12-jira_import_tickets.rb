@@ -528,8 +528,9 @@ if JIRA_API_UNKNOWN_USER && JIRA_API_UNKNOWN_USER.length
     puts "Found Jira unknown user '#{JIRA_API_UNKNOWN_USER}' => OK"
   else
     user = {}
-    user['login'] = JIRA_API_UNKNOWN_USER
-    user['name'] = JIRA_API_UNKNOWN_USER
+    user[:assemblaName] = JIRA_API_UNKNOWN_USER
+    user[:emailAddress] = "#{JIRA_API_UNKNOWN_USER}@#{JIRA_API_DEFAULT_EMAIL}"
+    user[:assemblaLogin] = JIRA_API_UNKNOWN_USER
     result = jira_create_user(user)
     goodbye("Cannot find Jira unknown user '#{JIRA_API_UNKNOWN_USER}', make sure that has been created and enabled (see README.md).") unless result
     puts "Created Jira unknown user '#{JIRA_API_UNKNOWN_USER}'"

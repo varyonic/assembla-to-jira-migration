@@ -791,15 +791,15 @@ end
 def jira_create_user(user)
   result = nil
   url = "#{JIRA_API_HOST}/user"
-  email_address = user['email']
+  display_name = user[:assemblaName]
+  email_address = user[:emailAddress]
   if email_address.nil? || email_address.length.zero?
-    username = user['login']
+    username = user[:assemblaLogin]
     if username.nil? || username.length.zero?
-      username = user['name'].tr(' ', '_')
+      username = display_name.tr(' ', '_')
     end
     email_address = "#{username}@#{JIRA_API_DEFAULT_EMAIL}"
   end
-  display_name = user['name']
   payload = {
     emailAddress: email_address,
     displayName: display_name,
