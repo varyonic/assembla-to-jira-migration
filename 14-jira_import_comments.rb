@@ -35,7 +35,7 @@ def insert_bitbucket_repo_link(body)
       to = @repo_table[from]
       if to.nil?
         # Keep track of missing repos and display at end.
-        @missing_repos[from] = 0 unless @missing_repos[from].nil?
+        @missing_repos[from] = 0 if @missing_repos[from].nil?
         @missing_repos[from] += 1
         body.sub!(re, match + "\nERROR: Cannot find repo entry for '#{from}'")
       else
