@@ -153,7 +153,7 @@ end
 puts "\nTotal users who already exist (will be skipped): #{@users_skip.count}"
 @users_skip.each do |user|
   puts "* Assembla: name='#{user[:assemblaName]}' id='#{user[:assemblaId]}' login='#{user[:assemblaLogin]}' email='#{user[:emailAddress]}'"
-  puts "  Jira:     name='#{user['displayName']}' id='#{user['accountId']}' active='#{user['active']}' accountType='#{user['accountType']}'"
+  puts "  Jira:     id='#{user['accountId']}' active='#{user['active']}' accountType='#{user['accountType']}'"
 end
 
 puts "\nTotal users to be created: #{@users_create.count}"
