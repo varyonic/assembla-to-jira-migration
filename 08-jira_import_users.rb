@@ -89,14 +89,14 @@ puts
   a['displayName'].match(/^Unknown #(\d+)$/)[1].to_i <=> b['displayName'].match(/^Unknown #(\d+)$/)[1].to_i
 end
 @existing_users_jira = @all_users_jira.reject { |c| c['displayName'].match?(/^Unknown #\d+$/) }.sort { |a, b| a['displayName'] <=> b['displayName'] }
-puts "\nExisting Jira users: #{@existing_users_jira.count}"
+puts "\nExisting Jira users (accountType 'atlassian'): #{@existing_users_jira.count}"
 @existing_users_jira.each do |u|
-  puts "* displayName='#{u['displayName']}' accountId='#{u['accountId']}' active='#{u['active']}' accountType='#{u['accountType']}'"
+  puts "* displayName='#{u['displayName']}' accountId='#{u['accountId']}' active='#{u['active']}'"
 end
 
 puts "\nUnknown Jira users: #{@unknown_users_jira.count}"
 @unknown_users_jira.each do |u|
-  puts "* displayName='#{u['displayName']}' accountId='#{u['accountId']}' active='#{u['active']}' accountType='#{u['accountType']}'"
+  puts "* displayName='#{u['displayName']}' accountId='#{u['accountId']}' active='#{u['active']}'"
 end
 
 @users_jira = []
@@ -153,7 +153,7 @@ end
 puts "\nTotal users who already exist (will be skipped): #{@users_skip.count}"
 @users_skip.each do |user|
   puts "* Assembla: name='#{user[:assemblaName]}' id='#{user[:assemblaId]}' login='#{user[:assemblaLogin]}' email='#{user[:emailAddress]}'"
-  puts "  Jira:     id='#{user['accountId']}' active='#{user['active']}' accountType='#{user['accountType']}'"
+  puts "  Jira:     id='#{user['accountId']}' active='#{user['active']}'"
 end
 
 puts "\nTotal users to be created: #{@users_create.count}"
