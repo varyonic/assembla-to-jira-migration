@@ -166,7 +166,7 @@ unless @dry_run
   @users_create.each do |user|
     u2 = jira_create_user(user)
     if u2
-      @users_jira << { 'assemblaId': user['id'], 'assemblaName': user['name'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }.merge(u2)
+      @users_jira << { 'assemblaName': user[:assemblaName], 'assemblaId': user[:assemblaId], 'assemblaLogin': user[:assemblaLogin], 'emailAddress': user[:emailAddress] }.merge(u2)
     end
   end
 end
