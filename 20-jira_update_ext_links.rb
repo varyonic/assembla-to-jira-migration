@@ -143,12 +143,14 @@ end
 
 @assembla_spaces = csv_to_array("#{OUTPUT_DIR_ASSEMBLA}/spaces.csv")
 @a_space_id_to_wiki_name = {}
+@a_wiki_name_to_space_name = {}
 puts "\nTotal assembla spaces: #{@assembla_spaces.count}"
 @assembla_spaces.each do |space|
   id = space['id']
   name = space['name']
   wiki_name = space['wiki_name']
   @a_space_id_to_wiki_name[id] = wiki_name
+  @a_wiki_name_to_space_name[wiki_name] = name
   puts "* id='#{id}' name='#{name}' wiki_name='#{wiki_name}'"
 end
 puts
@@ -236,8 +238,8 @@ end
 
 def jira_update_issue_description(issue_key, description)
   result = nil
-  user_login = @ticket_j_key_to_j_reporter[issue_key]
-  user_login.sub!(/@.*$/, '')
+  # user_login = @ticket_j_key_to_j_reporter[issue_key]
+  # user_login.sub!(/@.*$/, '')
   headers = JIRA_HEADERS_ADMIN
   url = "#{URL_JIRA_ISSUES}/#{issue_key}?notifyUsers=false"
   payload = {
@@ -260,8 +262,8 @@ end
 
 def jira_update_comment_body(issue_key, comment_id, body)
   result = nil
-  user_login = @comment_j_key_to_j_login[issue_key]
-  user_login.sub!(/@.*$/, '')
+  # user_login = @comment_j_key_to_j_login[issue_key]
+  # user_login.sub!(/@.*$/, '')
   headers = JIRA_HEADERS_ADMIN
   url = "#{URL_JIRA_ISSUES}/#{issue_key}/comment/#{comment_id}"
   payload = {
@@ -339,13 +341,18 @@ def get_project_by_space(space)
     if converted_space
       project = @project_by_space[converted_space]
     else
-      wiki_name = @a_space_id_to_wiki_name[space]
-      if wiki_name
-        @converted_spaces[space] = wiki_name
-        puts "get_project_by_space() id='#{space}' converted to wiki_name='#{wiki_name}'"
-        project = @project_by_space[wiki_name]
+      # Assembla BUG: Could 'space' actually be the wiki_name?
+      space_name = @a_wiki_name_to_space_name[space]
+      if space_name
+        @converted_spaces[space] = space_name
+        puts "get_project_by_space() space='#{space}' converted to space_name='#{space_name}'"
+        project = @project_by_space[space_name]
+        if project.nil?
+          # This should logically be impossible, but you never know for sure.
+          puts "*** Cannot find project for space='#{space}' => SKIP"
+        end
       else
-        puts "Cannot find project for space='#{space}' => SKIP"
+        puts "*** Cannot find project for space='#{space}' => SKIP"
       end
     end
   end
@@ -683,7 +690,7 @@ if tickets_created_on
 end
 
 @total_assembla_associations = @associations_assembla.length
-puts "Total Assembla associations: #{@total_assembla_associations}"
+puts "\nTotal Assembla associations: #{@total_assembla_associations}"
 
 # Filter for ok tickets only
 @associations_assembla.select! { |c| @is_ticket_id[c['ticket_id']] }
@@ -730,8 +737,8 @@ puts "\nTotal tickets: #{@relationship_tickets.keys.length}"
 # POST /rest/api/2/issueLink
 def jira_update_association(name, ticket1_id, ticket2_id, ticket_id, counter)
   result = nil
-  user_login = @jira_id_to_login[ticket_id]
-  user_login.sub!(/@.*$/, '')
+  # user_login = @jira_id_to_login[ticket_id]
+  # user_login.sub!(/@.*$/, '')
   # headers = headers_user_login(user_login, user_email)
   headers = JIRA_HEADERS_ADMIN
   name.capitalize!
