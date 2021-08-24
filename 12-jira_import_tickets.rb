@@ -330,6 +330,10 @@ def create_ticket_jira(ticket, counter, total)
       if value.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)
         value = value.sub(' ', 'T') + '.000Z'
         # value = value.sub(' ', 'T') + '.000' + ASSEMBLA_TIMEZONE
+      elsif value.match?(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/)
+        # Assembla BUG: seconds are missing, add them!
+        value = "#{value}:00"
+        value = value.sub(' ', 'T') + '.000Z'
       end
       payload[:fields]["#{@customfield_name_to_id[k]}".to_sym] = value
     else
