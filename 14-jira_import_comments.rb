@@ -217,7 +217,7 @@ def jira_create_comment(issue_id, user_id, comment, counter)
                                        images: @list_of_images, content_type: 'comments', strikethru: true)
   body = "Created on #{date_time(comment['created_on'])}\n\n#{reformatted_body}"
   if JIRA_SERVER_TYPE == 'cloud'
-    author_link = user_id ? "[~accountid:#{user_id}]" : "unknown (#{user_id})"
+    author_link = user_id ? "[~accountid:#{user_id}]" : "unknown"
     body = "Author #{author_link} | #{body}"
   end
   body = "Assembla | #{body}"

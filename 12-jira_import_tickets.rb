@@ -305,7 +305,7 @@ def create_ticket_jira(ticket, counter, total)
     next if v.nil? || v.length.zero?
     type = @custom_title_to_type[k]
     value = type == 'Numeric' ? (v.index('.') ? v.to_f : v.to_i) : v
-    if type == 'List'
+    if %w[List Checkbox].include?(type)
       id = jira_get_list_option_id(k, v)
       if id
         payload[:fields]["#{@customfield_name_to_id[k]}".to_sym] = {}

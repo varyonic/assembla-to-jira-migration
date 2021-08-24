@@ -67,7 +67,7 @@ if @custom_fields_assembla.length.nonzero?
       h = field[1]
       name = h['name']
       found = @custom_fields_assembla.detect { |f| f['title'] == name }
-      next unless found && found['type'] == 'List'
+      next unless found && %w[List Checkbox].include?(found['type'])
       list = { id: custom_field, name: name, options: [] }
       puts "\n#{custom_field} => '#{name}'" unless b
       h['allowedValues'].each do |v|
