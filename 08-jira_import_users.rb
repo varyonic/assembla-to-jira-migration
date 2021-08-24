@@ -181,7 +181,7 @@ if @dry_run
 else
   puts "Total Jira users: #{@users_jira.count}:"
   @users_jira.each do |user|
-    puts "* Assembla: name='#{user['name']}' id='#{user['assemblaid']}' login='#{user['assemblalogin']}' email='#{user['emailAddress']}'"
+    puts "* Assembla: name='#{user[:assemblaName]}' id='#{user[:assemblaId]}' login='#{user[:assemblaLogin]}' email='#{user[:emailAddress]}'"
     puts "* Jira:     id='#{user['accountid']}' active='#{user['active']}'"
   end
   # jira-users.csv => assemblaid,assemblalogin,emailAddress,accountid,name,displayname,active
