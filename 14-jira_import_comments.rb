@@ -194,17 +194,12 @@ end
 @total_comments_diffs = 0
 
 # POST /rest/api/2/issue/{issueIdOrKey}/comment
-def jira_create_comment(issue_id, user_id, comment, counter)
+def jira_create_comment(issue_id, assembla_user_id, comment, counter)
   result = nil
   url = "#{URL_JIRA_ISSUES}/#{issue_id}/comment"
-  user_login = @a_user_id_to_j_user_name[user_id]
-  user_id = @a_user_id_to_j_user_id[user_id]
-  if user_login
-    user_email = @user_id_to_email[user_id]
-  else
-    user_login = JIRA_API_UNKNOWN_USER
-    user_email = user_login + '@' + JIRA_API_DEFAULT_EMAIL
-  end
+  jira_user_name = @a_user_id_to_j_user_name[assembla_user_id]
+  jira_user_id = @a_user_id_to_j_user_id[assembla_user_id]
+  jira_user_name = "unknown" if jira_user_name.nil?
   # headers = headers_user_login_comment(user_login, user_email)
   headers = JIRA_HEADERS_ADMIN
   comment_comment = if comment['comment'].nil? || comment['comment'].strip.empty?
@@ -217,7 +212,7 @@ def jira_create_comment(issue_id, user_id, comment, counter)
                                        images: @list_of_images, content_type: 'comments', strikethru: true)
   body = "Created on #{date_time(comment['created_on'])}\n\n#{reformatted_body}"
   if JIRA_SERVER_TYPE == 'cloud'
-    author_link = user_id ? "[~accountid:#{user_id}]" : "unknown"
+    author_link = jira_user_id ? "[~accountid:#{jira_user_id}]" : jira_user_name
     body = "Author #{author_link} | #{body}"
   end
   body = "Assembla | #{body}"
@@ -231,7 +226,7 @@ def jira_create_comment(issue_id, user_id, comment, counter)
   }.to_json
   percentage = ((counter * 100) / @comments_total).round.to_s.rjust(3)
   if @dry_run
-    puts "----- jira_create_comment() issue_id='#{issue_id}' user_login='#{user_login}' comment_id='#{comment['id']}', counter='#{counter}' -----" if @dry_run
+    puts "----- jira_create_comment() issue_id='#{issue_id}' jira_user_name='#{jira_user_name}' comment_id='#{comment['id']}', counter='#{counter}' -----" if @dry_run
     puts body
     puts '----- end -----'
     return
