@@ -179,7 +179,7 @@ if @dry_run
   puts 'But make sure you are sure!'
   puts
 else
-  puts "Total Jira users: #{@user_jira.count}:"
+  puts "Total Jira users: #{@users_jira.count}:"
   @users_jira.each do |user|
     puts "* Assembla: name='#{user['name']}' id='#{user['assemblaid']}' login='#{user['assemblalogin']}' email='#{user['emailAddress']}'"
     puts "* Jira:     id='#{user['accountid']}' active='#{user['active']}'"
