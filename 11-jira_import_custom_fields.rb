@@ -78,7 +78,7 @@ end
 custom_fields_csv = "#{OUTPUT_DIR_ASSEMBLA}/tickets-custom-fields.csv"
 
 @custom_fields_assembla = csv_to_array(custom_fields_csv)
-goodbye('Cannot get custom fields!') unless @custom_fields_assembla.length.nonzero?
+goodbye('Cannot get custom fields! Might be that this Assembla space does not have any custom fields, you might want to check just in case.') unless @custom_fields_assembla.length.nonzero?
 
 @custom_fields_jira = jira_get_fields.select do |field|
   field['custom'] && @custom_plugin_names.index(field['schema']['custom']) && field['name'] !~ /^Assembla/
