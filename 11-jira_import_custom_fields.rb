@@ -143,7 +143,7 @@ missing_fields.each do |field|
   description = "Assembla custom field '#{name}' of type '#{type}' which has been converted to jira plugin '#{jira_plugin}'"
   custom_field = jira_create_custom_field(name, description, jira_plugin, searcher_key)
   if custom_field
-    todo_list << field if item[:name] == 'List'
+    todo_list << field if %w[List Checkbox].include?(item[:name])
     # TODO
     # field_key = custom_field['key']
     # options = JSON.parse(field['list_options'])
@@ -169,8 +169,9 @@ unless missing_fields.length.zero?
 end
 
 unless todo_list.length.zero?
-  puts "\nIMPORTANT: The following custom JIRA fields are LISTS and you MUST configure them and add the given options."
+  puts "\nIMPORTANT: The following custom JIRA fields have type LIST or CHECKBOX and you MUST configure them and add the given options."
   todo_list.each do |f|
     puts "* #{f['title']} => #{f['list_options']}"
   end
+  puts "\nIMPORTANT: Also do NOT forget to add these custom fields to the project DEFAULT and BUG screen schemes!"
 end
