@@ -5,18 +5,33 @@ def percentage(counter, total)
 end
 
 def confluence_get_spaces
-  url = "#{API}/space"
-  results = nil
-  begin
-    response = RestClient::Request.execute(method: :get, url: url, headers: HEADERS)
-    body = JSON.parse(response.body)
-    results = body['results']
-    puts "GET url='#{url}' => OK"
-  rescue => e
-    error = e.response ? JSON.parse(e.response) : e
-    puts "GET url='#{url}' => NOK error='#{error}'"
+  spaces = []
+  start = 0
+  limit = 25
+  is_last = false
+  until is_last
+    url = "#{API}/space?start=#{start}&limit=#{limit}"
+    begin
+      response = RestClient::Request.execute(method: :get, url: url, headers: HEADERS)
+      body = JSON.parse(response.body)
+      results = body['results']
+      size = results.length
+      results.each do |result|
+        spaces << result
+      end
+      puts "GET url='#{url}' => OK (#{size})"
+      if size < limit
+        is_last = true
+      else
+        start += limit
+      end
+    rescue => e
+      error = e.response ? JSON.parse(e.response) : e
+      puts "GET url='#{url}' => NOK error='#{error}'"
+      is_last = true
+    end
   end
-  results
+  spaces
 end
 
 # id, key, name, type, status
