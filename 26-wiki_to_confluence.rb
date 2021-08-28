@@ -86,7 +86,13 @@ end
 # assignee_name,reporter_name,priority_name,status_name,labels,description,assembla_ticket_id,assembla_ticket_number,
 # milestone_name,story_rank
 tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets.csv"
-@jira_tickets_csv = csv_to_array(tickets_jira_csv).select { |ticket| ticket['result'] == 'OK' }
+
+if File.exist?(tickets_jira_csv)
+  @jira_tickets_csv = csv_to_array(tickets_jira_csv).select { |ticket| ticket['result'] == 'OK' }
+else
+  puts "Cannot find file '#{tickets_jira_csv}', assuming that there are no tickets"
+  @jira_tickets_csv = []
+end
 
 # Check for duplicates just in case.
 @assembla_nr_to_jira_key = {}
@@ -436,7 +442,7 @@ def download_all_documents
   total = @all_documents.length
   puts "\nDownloading #{total} documents"
   @all_documents.each_with_index do |document, index|
-    download_item(DOCUMENTS, document['value'], index + 1, total)
+    download_item(DOCUMENTS_DIR, document['value'], index + 1, total)
   end
   puts "Done!" unless total.zero?
 end
