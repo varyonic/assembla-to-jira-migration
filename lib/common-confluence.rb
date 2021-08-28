@@ -29,6 +29,7 @@ PASSWORD = ENV['CONFLUENCE_PASSWORD'] || throw('CONFLUENCE_PASSWORD must be defi
 
 # Define directories
 DATA_DIR = output_dir_confluence(ASSEMBLA_SPACE)
+ROOT_DIR = DATA_DIR.sub(/\/[^\/]+$/,'')
 IMAGES_DIR = "#{DATA_DIR}/images"
 DOCUMENTS_DIR = "#{DATA_DIR}/documents"
 
@@ -53,13 +54,14 @@ puts "API           : '#{API}'"
 puts "SPACE         : '#{SPACE}'"
 puts "EMAIL         : '#{EMAIL}'"
 puts
+puts "ROOT_DIR      : '#{ROOT_DIR}'"
 puts "DATA_DIR      : '#{DATA_DIR}'"
 puts "IMAGES_DIR    : '#{IMAGES_DIR}'"
 puts "DOCUMENTS_DIR : '#{DOCUMENTS_DIR}'"
 puts
 
 # Create directories if not already present
-[DATA_DIR, IMAGES_DIR, DOCUMENTS_DIR].each { |dir| Dir.mkdir(dir) unless File.exist?(dir) }
+[ROOT_DIR, DATA_DIR, IMAGES_DIR, DOCUMENTS_DIR].each { |dir| Dir.mkdir(dir) unless File.exist?(dir) }
 
 # Authentication header
 base64_admin = Base64.strict_encode64(JIRA_API_ADMIN_EMAIL + ':' + JIRA_API_KEY).gsub(/\n/, '')
