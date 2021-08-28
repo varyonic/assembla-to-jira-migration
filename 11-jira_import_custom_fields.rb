@@ -162,7 +162,7 @@ unless len.zero?
 end
 
 unless missing_fields.length.zero?
-  puts "\nIMPORTANT: the following custom JIRA fields MUST be linked to the Scrum Default and Scrum Bug screens."
+  puts "\nIMPORTANT: the following custom JIRA fields MUST be linked to the project DEFAULT and BUG screen schemes."
   missing_fields.each do |f|
     puts "* #{f['title']} => type='#{f['type']}'"
   end
@@ -173,5 +173,4 @@ unless todo_list.length.zero?
   todo_list.each do |f|
     puts "* #{f['title']} => #{f['list_options']}"
   end
-  puts "\nIMPORTANT: Also do NOT forget to add these custom fields to the project DEFAULT and BUG screen schemes!"
 end

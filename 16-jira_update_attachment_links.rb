@@ -5,10 +5,18 @@ load './lib/common.rb'
 # --- ASSEMBLA Tickets --- #
 
 tickets_assembla_csv = "#{OUTPUT_DIR_ASSEMBLA}/tickets.csv"
-comments_assembla_csv = "#{OUTPUT_DIR_ASSEMBLA}/ticket-comments.csv"
+if File.exist?(tickets_assembla_csv)
+  @tickets_assembla = csv_to_array(tickets_assembla_csv)
+else
+  goodbye("Cannot find file '#{tickets_assembla_csv}'")
+end
 
-@tickets_assembla = csv_to_array(tickets_assembla_csv)
-@comments_assembla = csv_to_array(comments_assembla_csv)
+comments_assembla_csv = "#{OUTPUT_DIR_ASSEMBLA}/ticket-comments.csv"
+if File.exist?(comments_assembla_csv)
+  @comments_assembla = csv_to_array(comments_assembla_csv)
+else
+  goodbye("Cannot find file '#{tickets_assembla_csv}'")
+end
 
 @a_id_to_a_nr = {}
 @tickets_assembla.each do |ticket|
@@ -101,11 +109,18 @@ end
 # --- JIRA Tickets --- #
 
 tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets.csv"
-@tickets_jira = csv_to_array(tickets_jira_csv).select { |ticket| ticket['result'] == 'OK' }
+if File.exist?(tickets_jira_csv)
+  @tickets_jira = csv_to_array(tickets_jira_csv).select { |ticket| ticket['result'] == 'OK' }
+else
+  goodbye("Cannot find file '#{tickets_assembla_csv}'")
+end
+
 comments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-comments.csv"
-@comments_jira = csv_to_array(comments_jira_csv)
-
-
+if File.exist?(comments_jira_csv)
+  @comments_jira = csv_to_array(comments_jira_csv)
+else
+  goodbye("Cannot find file '#{tickets_assembla_csv}'")
+end
 
 attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-import-ok.csv"
 unless File.exist?(attachments_jira_csv)

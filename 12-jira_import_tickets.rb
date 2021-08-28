@@ -726,8 +726,8 @@ puts "Total tickets: #{@total_tickets}"
 tickets_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-tickets.csv"
 write_csv_file(tickets_jira_csv, @jira_issues)
 
-puts "Total unresolved ticket links: #{@jira_ticket_links.length}"
-puts "[#{@jira_ticket_links.map { |rec| rec[:jira_ticket_key] }.join(',')}]"
+puts "\nTotal unresolved ticket links: #{@jira_ticket_links.length}"
+puts "[#{@jira_ticket_links.map { |rec| rec[:jira_ticket_key] }.join(',')}]" if @jira_ticket_links.length.nonzero?
 ticket_links_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-ticket-links.csv"
 write_csv_file(ticket_links_jira_csv, @jira_ticket_links)
 
