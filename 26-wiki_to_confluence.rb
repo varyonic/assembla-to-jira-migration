@@ -13,6 +13,24 @@ def format_created_at(created_at)
   created_at.sub(/\.[^.]*$/, '').tr('T', ' ')
 end
 
+# Set to true if you just want to run and verify this script without actually updating any external links.
+@dry_run = true
+
+# You can also pass a parameter 'dry_run=true|false'
+if ARGV.length == 1
+  goodbye("Invalid ARGV0='#{ARGV[0]}', must be 'dry_run=true|false'") unless /^dry_run=(true|false)$/i.match?(ARGV[0])
+  @dry_run = ARGV[0].split('=')[1].casecmp('true') == 0
+  puts "Detected ARGV0='#{ARGV[0]}' => #{@dry_run}"
+end
+
+if @dry_run
+  puts
+  puts '----------------'
+  puts 'DRY RUN enabled!'
+  puts '----------------'
+  puts
+end
+
 spaces_assembla_csv = "#{OUTPUT_DIR_ASSEMBLA}/spaces.csv"
 @assembla_spaces_csv = csv_to_array(spaces_assembla_csv)
 
@@ -46,7 +64,12 @@ def is_wiki_space(src)
 end
 
 attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
-@jira_attachments_csv = csv_to_array(attachments_jira_csv)
+if File.exist?(attachments_jira_csv)
+  @jira_attachments_csv = csv_to_array(attachments_jira_csv)
+else
+  puts "\nCould not find file '#{attachments_jira_csv}', assuming that there are no attachments."
+  @jira_attachments_csv = []
+end
 
 @a_attachment_id_to_j_filename = {}
 
@@ -185,12 +208,12 @@ def get_all_links
 
       counter += 1
       links << {
-          id: id,
-          counter: counter,
-          title: title,
-          tag: 'image',
-          value: value,
-          text: ''
+        id: id,
+        counter: counter,
+        title: title,
+        tag: 'image',
+        value: value,
+        text: ''
       }
     end
 
@@ -202,12 +225,12 @@ def get_all_links
       text = m[1]
       counter += 1
       links << {
-          id: id,
-          counter: counter,
-          title: title,
-          tag: 'anchor',
-          value: value,
-          text: text
+        id: id,
+        counter: counter,
+        title: title,
+        tag: 'anchor',
+        value: value,
+        text: text
       }
     end
 
@@ -217,12 +240,12 @@ def get_all_links
       text = m[1]
       counter += 1
       links << {
-          id: id,
-          counter: counter,
-          title: title,
-          tag: 'markdown',
-          value: value,
-          text: text
+        id: id,
+        counter: counter,
+        title: title,
+        tag: 'markdown',
+        value: value,
+        text: text
       }
     end
 
@@ -232,12 +255,12 @@ def get_all_links
       text = m[1]
       counter += 1
       links << {
-          id: id,
-          counter: counter,
-          title: title,
-          tag: 'code',
-          value: value,
-          text: text
+        id: id,
+        counter: counter,
+        title: title,
+        tag: 'code',
+        value: value,
+        text: text
       }
     end
 
@@ -249,12 +272,12 @@ def get_all_links
       text = m[1]
       counter += 1
       links << {
-          id: id,
-          counter: counter,
-          title: title,
-          tag: 'url',
-          value: value,
-          text: text
+        id: id,
+        counter: counter,
+        title: title,
+        tag: 'url',
+        value: value,
+        text: text
       }
     end
   end
@@ -305,40 +328,41 @@ def create_page_item(id, offset)
   # Prepend the body with a link to the original Wiki page
   prefix = "<p>Created by #{author} at #{created_at}</p><p><a href=\"#{url}\" target=\"_blank\">Assembla Wiki</a></p><hr/>"
 
-  # TODO
-  # result, error = confluence_create_page(@space['key'],
-  #                                        title_stripped,
-  #                                        prefix,
-  #                                        body,
-  #                                        parent_id,
-  #                                        @created_pages.length + 1,
-  #                                        @total_wiki_pages)
-  # @created_pages <<
-  #     if result
-  #       {
-  #           result: error ? 'NOK' : 'OK',
-  #           page_id: page_id,
-  #           id: result['id'],
-  #           offset: offset.join('-'),
-  #           title: title_stripped,
-  #           author: author,
-  #           created_at: created_at,
-  #           body: error ? body : '',
-  #           error: error || ''
-  #       }
-  #     else
-  #       {
-  #           result: 'NOK',
-  #           page_id: page_id,
-  #           id: 0,
-  #           offset: offset.join('-'),
-  #           title: title_stripped,
-  #           author: author,
-  #           created_at: created_at,
-  #           body: body,
-  #           error: error
-  #       }
-  #     end
+  unless @dry_run
+    result, error = confluence_create_page(@space['key'],
+                                           title_stripped,
+                                           prefix,
+                                           body,
+                                           parent_id,
+                                           @created_pages.length + 1,
+                                           @total_wiki_pages)
+    @created_pages <<
+      if result
+        {
+          result: error ? 'NOK' : 'OK',
+          page_id: page_id,
+          id: result['id'],
+          offset: offset.join('-'),
+          title: title_stripped,
+          author: author,
+          created_at: created_at,
+          body: error ? body : '',
+          error: error || ''
+        }
+      else
+        {
+          result: 'NOK',
+          page_id: page_id,
+          id: 0,
+          offset: offset.join('-'),
+          title: title_stripped,
+          author: author,
+          created_at: created_at,
+          body: body,
+          error: error
+        }
+      end
+  end
 end
 
 # GET /v1/spaces/:space_id/documents/:id
@@ -401,11 +425,11 @@ end
 
 def download_all_images
   total = @all_images.length
-  puts "\nDownloading #{total} images"
+  puts "\nDownloading #{total} images" unless total.zero?
   @all_images.each_with_index do |image, index|
     download_item(IMAGES_DIR, image['value'], index + 1, total)
   end
-  puts "\nDone!\n"
+  puts "Done!" unless total.zero?
 end
 
 def download_all_documents
@@ -414,6 +438,7 @@ def download_all_documents
   @all_documents.each_with_index do |document, index|
     download_item(DOCUMENTS, document['value'], index + 1, total)
   end
+  puts "Done!" unless total.zero?
 end
 
 def show_all_items(items, verify_proc = nil)
@@ -520,15 +545,17 @@ end
 
 # Parent pages sorted by created_at
 @parent_pages = @pages.reject { |_, value| value[:page]['parent_id'] }.sort_by { |_, value| value[:page]['created_at'] }
-puts "\n--- Parents: #{@parent_pages.length} ---\n"
+total = @parent_pages.length
+puts "\n--- Parents: #{total} ---\n"
 @parent_pages.each { |id, _| show_page(id) }
-puts "\nDone\n"
+puts "Done!" unless total.zero?
 
 # Child pages sorted by created_at
 @child_pages = @pages.select { |_, value| value[:page]['parent_id'] }.sort_by { |_, value| value[:page]['created_at'] }
-puts "\n--- Children: #{@child_pages.length} ---\n"
+total = @child_pages.length
+puts "\n--- Children: #{total} ---\n"
 @child_pages.each { |id, _| show_page(id) }
-puts "\nDone\n"
+puts "Done!" unless total.zero?
 
 puts "\n--- Page Tree: #{@pages.length} ---\n"
 count = 0
@@ -558,7 +585,7 @@ end
 @c_page_id_to_title = {}
 
 def wiki_page_id_converter
-# result,page_id,id,offset,title,author,created_at,body,error
+  # result,page_id,id,offset,title,author,created_at,body,error
   csv_to_array(CREATED_PAGES_CSV).each do |page|
     @c_to_w_page_id[page['id']] = page['page_id']
     @w_to_c_page_id[page['page_id']] = page['id']
@@ -619,20 +646,21 @@ def upload_all_images
         confluence_page_id = confluence_page['id']
         c_page_title = @c_page_id_to_title[confluence_page_id]
         puts "#{msg} confluence_page_id=#{confluence_page_id} title='#{c_page_title}' wiki_image_id='#{wiki_image_id}' original_name='#{original_name}'"
-        # TODO
-        # result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_images)
-        # confluence_image_id = result ? result['results'][0]['id'] : nil
-        # @uploaded_images << {
-        #     result: result ? 'OK' : 'NOK',
-        #     confluence_image_id: confluence_image_id,
-        #     wiki_image_id: wiki_image_id,
-        #     basename: basename,
-        #     confluence_page_id: confluence_page_id,
-        #     link_url: link_url
-        # }
-        # if result
-        #   confluence_update_attachment(confluence_page_id, confluence_image_id, content_type, index + 1, total_images)
-        # end
+        unless @dry_run
+          result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_images)
+          confluence_image_id = result ? result['results'][0]['id'] : nil
+          @uploaded_images << {
+            result: result ? 'OK' : 'NOK',
+            confluence_image_id: confluence_image_id,
+            wiki_image_id: wiki_image_id,
+            basename: basename,
+            confluence_page_id: confluence_page_id,
+            link_url: link_url
+          }
+          if result
+            confluence_update_attachment(confluence_page_id, confluence_image_id, content_type, index + 1, total_images)
+          end
+        end
       else
         puts "#{msg} cannot find confluence_id for wiki_id='#{wiki_image_id}'"
       end
@@ -694,20 +722,21 @@ def upload_all_documents
         confluence_page_id = confluence_page['id']
         c_page_title = @c_page_id_to_title[confluence_page_id]
         puts "#{msg} confluence_page_id=#{confluence_page_id} title='#{c_page_title}' wiki_document_id='#{wiki_document_id}' original_name='#{original_name}'"
-        # TODO
-        # result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_documents)
-        # confluence_document_id = result ? result['results'][0]['id'] : nil
-        # @uploaded_documents << {
-        #     result: result ? 'OK' : 'NOK',
-        #     confluence_document_id: confluence_document_id,
-        #     wiki_document_id: wiki_document_id,
-        #     basename: basename,
-        #     confluence_page_id: confluence_page_id,
-        #     link_url: link_url
-        # }
-        # if result
-        #   confluence_update_attachment(confluence_page_id, confluence_document_id, content_type, index + 1, total_documents)
-        # end
+        unless @dry_run
+          result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_documents)
+          confluence_document_id = result ? result['results'][0]['id'] : nil
+          @uploaded_documents << {
+            result: result ? 'OK' : 'NOK',
+            confluence_document_id: confluence_document_id,
+            wiki_document_id: wiki_document_id,
+            basename: basename,
+            confluence_page_id: confluence_page_id,
+            link_url: link_url
+          }
+          if result
+            confluence_update_attachment(confluence_page_id, confluence_document_id, content_type, index + 1, total_documents)
+          end
+        end
       else
         puts "#{msg} cannot find confluence_id for wiki_id='#{wiki_document_id}'"
       end
@@ -809,8 +838,7 @@ def update_all_image_links
       end
       puts "* confluence_image_id='#{confluence_image_id}' link_url='#{link_url}' basename='#{basename}' => #{res}"
     end
-    # TODO
-    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total) unless @dry_run
   end
 end
 
@@ -863,8 +891,7 @@ def update_all_page_links
       end
       puts "* title='#{title}' link_url='#{link_url}' => #{res}"
     end
-    # TODO
-    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total) unless @dry_run
   end
 end
 
@@ -949,8 +976,7 @@ def update_all_md_page_links
       end
       puts "* value='#{value}' title='#{title}' page_id='#{page_id}' version=#{version} => #{res}"
     end
-    # TODO
-    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total) unless @dry_run
   end
 end
 
@@ -1051,16 +1077,15 @@ def update_all_md_url_links
         puts "* value='#{value}' text='#{text}' => OK"
       else
         nok << {
-            page_id: c_page_id,
-            title: @c_page_id_to_title[c_page_id],
-            value: value,
-            text: text
+          page_id: c_page_id,
+          title: @c_page_id_to_title[c_page_id],
+          value: value,
+          text: text
         }
         puts "* value='#{value}' text='#{text}' #{regexp_error ? 'regexp error ' : ''}=> NOK"
       end
-    end
-    # TODO
-    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    end unless @dry_run
+    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total) unless @dry_run
   end
 
   if nok.length
@@ -1089,10 +1114,10 @@ def update_all_document_links
     confluence_page_id = item['confluence_page_id']
     confluence_page_ids[confluence_page_id] = [] unless confluence_page_ids[confluence_page_id]
     confluence_page_ids[confluence_page_id] << {
-        confluence_document_id: item['confluence_document_id'],
-        wiki_document_id: item['wiki_document_id'],
-        basename: item['basename'],
-        link_url: item['link_url']
+      confluence_document_id: item['confluence_document_id'],
+      wiki_document_id: item['wiki_document_id'],
+      basename: item['basename'],
+      link_url: item['link_url']
     }
     total += 1
   end
@@ -1129,8 +1154,7 @@ def update_all_document_links
       end
       puts "* document_id='#{confluence_document_id}' filename='#{basename}' link_url='#{link_url}'"
     end
-    # TODO
-    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total) unless @dry_run
   end
 
   puts "\nIMPORTANT: Update all document links manually by replacing them using insert link attachment\n"
@@ -1172,11 +1196,11 @@ def update_all_ticket_links
     confluence_page_id = @w_to_c_page_id[ticket['id']]
     confluence_page_ids[confluence_page_id] = [] unless confluence_page_ids[confluence_page_id]
     confluence_page_ids[confluence_page_id] << {
-        result: result,
-        value: value,
-        text: text,
-        assembla_ticket_nr: assembla_ticket_nr,
-        jira_issue_key: jira_issue_key
+      result: result,
+      value: value,
+      text: text,
+      assembla_ticket_nr: assembla_ticket_nr,
+      jira_issue_key: jira_issue_key
     }
     total += 1
   end
@@ -1221,8 +1245,7 @@ def update_all_ticket_links
         res = 'NOK'
       end
     end
-    # TODO
-    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total) unless @dry_run
   end
 end
 
@@ -1271,10 +1294,10 @@ def check_for_tickets
       issue_key = @assembla_nr_to_jira_key[ticket_nr] || 'unknown'
       puts "* #{ticket_nr} => #{issue_key}"
       list << {
-          ticket_nr: ticket_nr,
-          issue_key: issue_key,
-          page_id: page_id,
-          page_title: page_title
+        ticket_nr: ticket_nr,
+        issue_key: issue_key,
+        page_id: page_id,
+        page_title: page_title
       }
     end
   end
@@ -1300,8 +1323,8 @@ def check_for_tickets
     key = "#{page_id}|#{page_title}"
     page_ids[key] = [] unless page_ids[key]
     page_ids[key] << {
-        ticket_nr: item['ticket_nr'],
-        issue_key: item['issue_key']
+      ticket_nr: item['ticket_nr'],
+      issue_key: item['issue_key']
     }
     puts "ticket_nr='#{item['ticket_nr']}' issue_key='#{item['issue_key']}' page_id='#{item['page_id']}' page_title='#{item['page_title']}'"
   end
@@ -1330,21 +1353,29 @@ def check_for_tickets
 
 end
 
-upload_all_pages
-# TODO
-# wiki_page_id_converter
-# update_all_page_links
-# upload_all_images
-# update_all_image_links
-# update_all_md_page_links
-# update_all_md_url_links
-# upload_all_documents
-# update_all_document_links
-# update_all_ticket_links
+if @dry_run
+  puts
+  puts 'IMPORTANT!'
+  puts 'Please note that DRY RUN has been enabled'
+  puts "For the real McCoy, call this script with 'dry_run=false'"
+  puts 'But make sure you are sure!'
+  puts
+else
+  upload_all_pages
+  wiki_page_id_converter
+  update_all_page_links
+  upload_all_images
+  update_all_image_links
+  update_all_md_page_links
+  update_all_md_url_links
+  upload_all_documents
+  update_all_document_links
+  update_all_ticket_links
 
-# The following lines can be uncommented to run extra checks.
-# check_for_regexes([/#\d+/, /\[.*?\]\(.*?\)/, /<code>.*?<\/code>/])
-# check_for_header_lines
-# check_for_tickets
+  # The following lines can be uncommented to run extra checks.
+  # check_for_regexes([/#\d+/, /\[.*?\]\(.*?\)/, /<code>.*?<\/code>/])
+  # check_for_header_lines
+  # check_for_tickets
 
-puts "\nAll done!\n"
+  puts "\nAll done!\n"
+end
