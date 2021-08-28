@@ -13,6 +13,52 @@ def format_created_at(created_at)
   created_at.sub(/\.[^.]*$/, '').tr('T', ' ')
 end
 
+spaces_assembla_csv = "#{OUTPUT_DIR_ASSEMBLA}/spaces.csv"
+@assembla_spaces_csv = csv_to_array(spaces_assembla_csv)
+
+@wiki_ids = {}
+@wiki_names = {}
+@wiki_wiki_names = {}
+@id_to_wiki_name = {}
+
+puts "\nTotal Assembla space: #{@assembla_spaces_csv.count}"
+# id,name,description,wiki_name,public_permissions,team_permissions,watcher_permissions,share_permissions,team_tab_role,created_at,updated_at,default_showpage,parent_id,restricted,restricted_date,commercial_from,banner,banner_height,banner_text,banner_link,style,status,approved,is_manager,is_volunteer,is_commercial,can_join,can_apply,last_payer_changed_at,prefix
+@assembla_spaces_csv.each do |space|
+  id = space['id']
+  name = space['name']
+  wiki_name = space['wiki_name']
+  puts "* id='#{id}' name='#{name}' wiki_name='#{wiki_name}'"
+  @wiki_ids[id] = true
+  @wiki_names[name] = true
+  @wiki_wiki_names[wiki_name] = true
+  @id_to_wiki_name[id] = wiki_name
+end
+
+# Return true of the src contains either the wiki name or wiki id in the path.
+def is_wiki_space(src)
+  # src="https://eu-app.assembla.com/spaces/ddLL8mW7rcHOkFmHBdOmo2/documents/ckzETUjw0r6OkEaMlMwbiA/download/ckzETUjw0r6OkEaMlMwbiA"
+  @assembla_spaces_csv.each do |space|
+    wiki_name = space['wiki_name']
+    id = space['id']
+    return true if %r{/#{id}|#{wiki_name}/}.match?(src)
+  end
+  false
+end
+
+attachments_jira_csv = "#{OUTPUT_DIR_JIRA}/jira-attachments-download.csv"
+@jira_attachments_csv = csv_to_array(attachments_jira_csv)
+
+@a_attachment_id_to_j_filename = {}
+
+puts "\nTotal Jira attachments: #{@jira_attachments_csv.count}"
+# created_at,created_by,assembla_attachment_id,assembla_ticket_id,filename,content_type
+@jira_attachments_csv.each do |attachment|
+  assembla_attachment_id = attachment['assembla_attachment_id']
+  filename = attachment['filename']
+  puts "* assembla_attachment_id='#{assembla_attachment_id}' filename='#{filename}'"
+  @a_attachment_id_to_j_filename[assembla_attachment_id] = filename
+end
+
 # result,retries,message,jira_ticket_id,jira_ticket_key,project_id,summary,issue_type_id,issue_type_name,
 # assignee_name,reporter_name,priority_name,status_name,labels,description,assembla_ticket_id,assembla_ticket_number,
 # milestone_name,story_rank
@@ -128,9 +174,14 @@ def get_all_links
     title = wiki['page_name']
 
     # <img ... src="(value)" ... />
+    # <img alt="" src="https://eu-app.assembla.com/spaces/ddLL8mW7rcHOkFmHBdOmo2/documents/ckzETUjw0r6OkEaMlMwbiA/download/ckzETUjw0r6OkEaMlMwbiA" />
     content.scan(%r{<img(?:.*?)? src="(.*?)"(?:.*?)?/?>}).each do |m|
       value = m[0]
-      next unless %r{/#{WIKI_NAME}/}.match?(value)
+      next unless is_wiki_space(value)
+
+      segments = value.split('/')
+      attachment_id = segments.last
+      filename = @a_attachment_id_to_j_filename[attachment_id]
 
       counter += 1
       links << {
@@ -146,7 +197,7 @@ def get_all_links
     # <a ... href="(value)" ...>(title)</a>
     content.scan(%r{<a(?:.*?)? href="(.*?)"(?:.*?)?>(.*?)</a>}).each do |m|
       value = m[0]
-      next unless %r{/#{WIKI_NAME}/}.match?(value)
+      next unless is_wiki_space(value)
 
       text = m[1]
       counter += 1
@@ -254,39 +305,40 @@ def create_page_item(id, offset)
   # Prepend the body with a link to the original Wiki page
   prefix = "<p>Created by #{author} at #{created_at}</p><p><a href=\"#{url}\" target=\"_blank\">Assembla Wiki</a></p><hr/>"
 
-  result, error = confluence_create_page(@space['key'],
-                                         title_stripped,
-                                         prefix,
-                                         body,
-                                         parent_id,
-                                         @created_pages.length + 1,
-                                         @total_wiki_pages)
-  @created_pages <<
-      if result
-        {
-            result: error ? 'NOK' : 'OK',
-            page_id: page_id,
-            id: result['id'],
-            offset: offset.join('-'),
-            title: title_stripped,
-            author: author,
-            created_at: created_at,
-            body: error ? body : '',
-            error: error || ''
-        }
-      else
-        {
-            result: 'NOK',
-            page_id: page_id,
-            id: 0,
-            offset: offset.join('-'),
-            title: title_stripped,
-            author: author,
-            created_at: created_at,
-            body: body,
-            error: error
-        }
-      end
+  # TODO
+  # result, error = confluence_create_page(@space['key'],
+  #                                        title_stripped,
+  #                                        prefix,
+  #                                        body,
+  #                                        parent_id,
+  #                                        @created_pages.length + 1,
+  #                                        @total_wiki_pages)
+  # @created_pages <<
+  #     if result
+  #       {
+  #           result: error ? 'NOK' : 'OK',
+  #           page_id: page_id,
+  #           id: result['id'],
+  #           offset: offset.join('-'),
+  #           title: title_stripped,
+  #           author: author,
+  #           created_at: created_at,
+  #           body: error ? body : '',
+  #           error: error || ''
+  #       }
+  #     else
+  #       {
+  #           result: 'NOK',
+  #           page_id: page_id,
+  #           id: 0,
+  #           offset: offset.join('-'),
+  #           title: title_stripped,
+  #           author: author,
+  #           created_at: created_at,
+  #           body: body,
+  #           error: error
+  #       }
+  #     end
 end
 
 # GET /v1/spaces/:space_id/documents/:id
@@ -298,9 +350,9 @@ def get_document_by_id(space_id, id, counter, total)
   begin
     result = RestClient::Request.execute(method: :get, url: url, headers: ASSEMBLA_HEADERS)
     document = JSON.parse(result) if result
-    puts "#{pct} GET url=#{url} => OK"
+    puts "#{pct} get_document_by_id() space_id='#{space_id}' GET url=#{url} => OK"
   rescue => e
-    puts "#{pct} GET url=#{url} => NOK error='#{e.inspect}'"
+    puts "#{pct} get_document_by_id() space_id='#{space_id}' GET url=#{url} => NOK error='#{e.inspect}'"
   end
   document
 end
@@ -336,7 +388,14 @@ def download_item(dir, url_link, counter, total)
     IO.binwrite(filepath, content)
     puts "#{pct} GET url=#{url} => OK"
   rescue => e
-    puts "#{pct} GET url=#{url} => NOK error='#{e.inspect}'"
+    error_msg = ''
+    if e.response
+      response = JSON.parse(e.response)
+      if response['error'] && response['error_description']
+        error_msg = " | #{response['error']}: #{response['error_description']}"
+      end
+    end
+    puts "#{pct} GET url=#{url} => NOK (#{e.message}#{error_msg})"
   end
 end
 
@@ -344,7 +403,7 @@ def download_all_images
   total = @all_images.length
   puts "\nDownloading #{total} images"
   @all_images.each_with_index do |image, index|
-    download_item(IMAGES, image['value'], index + 1, total)
+    download_item(IMAGES_DIR, image['value'], index + 1, total)
   end
   puts "\nDone!\n"
 end
@@ -388,7 +447,7 @@ puts "\n--- Links: #{@all_links.length} ---"
 @all_images = @all_links.select { |link| link['tag'] == 'image' }
 download_all_images
 puts "\n--- Images: #{@all_images.length} ---"
-show_all_items(@all_images, ->(value) { File.exist?("#{IMAGES}/#{File.basename(value)}") })
+show_all_items(@all_images, ->(value) { File.exist?("#{IMAGES_DIR}/#{File.basename(value)}") })
 
 # --- Anchors (documents + wiki pages) #
 @all_anchors = csv_to_array(LINKS_CSV).select { |link| link['tag'] == 'anchor' }.sort_by { |wiki| wiki['value'] }
@@ -398,7 +457,7 @@ puts "\n--- Anchors: #{@all_anchors.length} ---"
 @all_documents = @all_anchors.select { |anchor| anchor['value'].match(%r{/documents/}) }
 download_all_documents
 puts "\n--- Documents: #{@all_documents.length} ---"
-show_all_items(@all_documents, ->(value) { File.exist?("#{DOCUMENTS}/#{File.basename(value)}") })
+show_all_items(@all_documents, ->(value) { File.exist?("#{DOCUMENTS_DIR}/#{File.basename(value)}") })
 write_csv_file(WIKI_DOCUMENTS_CSV, @all_documents)
 
 # --- Tickets --- #
@@ -430,12 +489,12 @@ show_all_items(@all_wikis, verify_proc)
 verify_proc = lambda do |value|
   if value.start_with?('image:')
     image = value.sub(/^image:/, '').sub(/\|.*$/, '')
-    return File.exist?("#{IMAGES}/#{image}")
+    return File.exist?("#{IMAGES_DIR}/#{image}")
   elsif value.start_with?('url:')
     return true
   elsif value.start_with?('file:')
     file = value.sub(/^file:/, '').sub(/\|.*$/, '')
-    return File.exist?("#{DOCUMENTS}/#{file}")
+    return File.exist?("#{DOCUMENTS_DIR}/#{file}")
   else
     return @wiki_assembla.detect { |w| w['page_name'].casecmp(value.tr(' ', '_').sub(/\|.*$/, '')).zero? }
   end
@@ -552,7 +611,7 @@ def upload_all_images
       end
     end
 
-    filepath = "#{IMAGES}/#{basename}"
+    filepath = "#{IMAGES_DIR}/#{basename}"
     if File.exist?(filepath)
       wiki_image_id = image['id']
       confluence_page = @created_pages.detect { |page| page['page_id'] == wiki_image_id }
@@ -560,19 +619,20 @@ def upload_all_images
         confluence_page_id = confluence_page['id']
         c_page_title = @c_page_id_to_title[confluence_page_id]
         puts "#{msg} confluence_page_id=#{confluence_page_id} title='#{c_page_title}' wiki_image_id='#{wiki_image_id}' original_name='#{original_name}'"
-        result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_images)
-        confluence_image_id = result ? result['results'][0]['id'] : nil
-        @uploaded_images << {
-            result: result ? 'OK' : 'NOK',
-            confluence_image_id: confluence_image_id,
-            wiki_image_id: wiki_image_id,
-            basename: basename,
-            confluence_page_id: confluence_page_id,
-            link_url: link_url
-        }
-        if result
-          confluence_update_attachment(confluence_page_id, confluence_image_id, content_type, index + 1, total_images)
-        end
+        # TODO
+        # result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_images)
+        # confluence_image_id = result ? result['results'][0]['id'] : nil
+        # @uploaded_images << {
+        #     result: result ? 'OK' : 'NOK',
+        #     confluence_image_id: confluence_image_id,
+        #     wiki_image_id: wiki_image_id,
+        #     basename: basename,
+        #     confluence_page_id: confluence_page_id,
+        #     link_url: link_url
+        # }
+        # if result
+        #   confluence_update_attachment(confluence_page_id, confluence_image_id, content_type, index + 1, total_images)
+        # end
       else
         puts "#{msg} cannot find confluence_id for wiki_id='#{wiki_image_id}'"
       end
@@ -626,7 +686,7 @@ def upload_all_documents
       end
     end
 
-    filepath = "#{DOCUMENTS}/#{basename}"
+    filepath = "#{DOCUMENTS_DIR}/#{basename}"
     if File.exist?(filepath)
       wiki_document_id = document['id']
       confluence_page = @created_pages.detect { |page| page['page_id'] == wiki_document_id }
@@ -634,19 +694,20 @@ def upload_all_documents
         confluence_page_id = confluence_page['id']
         c_page_title = @c_page_id_to_title[confluence_page_id]
         puts "#{msg} confluence_page_id=#{confluence_page_id} title='#{c_page_title}' wiki_document_id='#{wiki_document_id}' original_name='#{original_name}'"
-        result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_documents)
-        confluence_document_id = result ? result['results'][0]['id'] : nil
-        @uploaded_documents << {
-            result: result ? 'OK' : 'NOK',
-            confluence_document_id: confluence_document_id,
-            wiki_document_id: wiki_document_id,
-            basename: basename,
-            confluence_page_id: confluence_page_id,
-            link_url: link_url
-        }
-        if result
-          confluence_update_attachment(confluence_page_id, confluence_document_id, content_type, index + 1, total_documents)
-        end
+        # TODO
+        # result = confluence_create_attachment(confluence_page_id, filepath, index + 1, total_documents)
+        # confluence_document_id = result ? result['results'][0]['id'] : nil
+        # @uploaded_documents << {
+        #     result: result ? 'OK' : 'NOK',
+        #     confluence_document_id: confluence_document_id,
+        #     wiki_document_id: wiki_document_id,
+        #     basename: basename,
+        #     confluence_page_id: confluence_page_id,
+        #     link_url: link_url
+        # }
+        # if result
+        #   confluence_update_attachment(confluence_page_id, confluence_document_id, content_type, index + 1, total_documents)
+        # end
       else
         puts "#{msg} cannot find confluence_id for wiki_id='#{wiki_document_id}'"
       end
@@ -748,7 +809,8 @@ def update_all_image_links
       end
       puts "* confluence_image_id='#{confluence_image_id}' link_url='#{link_url}' basename='#{basename}' => #{res}"
     end
-    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    # TODO
+    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
   end
 end
 
@@ -801,7 +863,8 @@ def update_all_page_links
       end
       puts "* title='#{title}' link_url='#{link_url}' => #{res}"
     end
-    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    # TODO
+    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
   end
 end
 
@@ -886,7 +949,8 @@ def update_all_md_page_links
       end
       puts "* value='#{value}' title='#{title}' page_id='#{page_id}' version=#{version} => #{res}"
     end
-    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    # TODO
+    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
   end
 end
 
@@ -995,7 +1059,8 @@ def update_all_md_url_links
         puts "* value='#{value}' text='#{text}' #{regexp_error ? 'regexp error ' : ''}=> NOK"
       end
     end
-    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    # TODO
+    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
   end
 
   if nok.length
@@ -1064,7 +1129,8 @@ def update_all_document_links
       end
       puts "* document_id='#{confluence_document_id}' filename='#{basename}' link_url='#{link_url}'"
     end
-    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    # TODO
+    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
   end
 
   puts "\nIMPORTANT: Update all document links manually by replacing them using insert link attachment\n"
@@ -1155,7 +1221,8 @@ def update_all_ticket_links
         res = 'NOK'
       end
     end
-    confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
+    # TODO
+    # confluence_update_page(@space['key'], c_page_id, c_page_title, @content, counter, total)
   end
 end
 
@@ -1264,15 +1331,16 @@ def check_for_tickets
 end
 
 upload_all_pages
-wiki_page_id_converter
-update_all_page_links
-upload_all_images
-update_all_image_links
-update_all_md_page_links
-update_all_md_url_links
-upload_all_documents
-update_all_document_links
-update_all_ticket_links
+# TODO
+# wiki_page_id_converter
+# update_all_page_links
+# upload_all_images
+# update_all_image_links
+# update_all_md_page_links
+# update_all_md_url_links
+# upload_all_documents
+# update_all_document_links
+# update_all_ticket_links
 
 # The following lines can be uncommented to run extra checks.
 # check_for_regexes([/#\d+/, /\[.*?\]\(.*?\)/, /<code>.*?<\/code>/])

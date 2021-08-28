@@ -18,10 +18,7 @@ unless RUBY_VERSION == version
 end
 
 # Load environment
-DEBUG = ENV['DEBUG'] == 'true'
-DATA = ENV['DATA'] || 'data/confluence'
-IMAGES = ENV['IMAGES'] || 'data/confluence/images'
-DOCUMENTS = ENV['DOCUMENTS'] || 'data/confluence/documents'
+DEBUG = ENV['CONFLUENCE_DEBUG'] == 'true'
 WIKI = ENV['ASSEMBLA_WIKI'] || throw('ASSEMBLA_WIKI must be defined')
 WIKI_NAME = ENV['ASSEMBLA_WIKI_NAME'] || throw('ASSEMBLA_WIKI_NAME must be defined')
 API = ENV['CONFLUENCE_API'] || throw('CONFLUENCE_API must be defined')
@@ -30,33 +27,39 @@ SPACE = ENV['CONFLUENCE_SPACE'] || throw('CONFLUENCE_SPACE must be defined')
 EMAIL = ENV['CONFLUENCE_EMAIL'] || throw('CONFLUENCE_EMAIL must be defined')
 PASSWORD = ENV['CONFLUENCE_PASSWORD'] || throw('CONFLUENCE_PASSWORD must be defined')
 
-# Global constants
-LINKS_CSV = "#{DATA}/links.csv"
-UPLOADED_IMAGES_CSV = "#{DATA}/uploaded-images.csv"
-UPLOADED_DOCUMENTS_CSV = "#{DATA}/uploaded-documents.csv"
-CREATED_PAGES_CSV = "#{DATA}/created-pages.csv"
-CREATED_PAGES_NOK_CSV = "#{DATA}/created-pages-nok.csv"
-UPDATED_PAGES_CSV = "#{DATA}/updated-pages.csv"
-WIKI_FIXED_CSV = "#{DATA}/wiki-pages-fixed.csv"
-WIKI_DOCUMENTS_CSV = "#{DATA}/wiki-documents.csv"
-WIKI_TICKETS_CSV = "#{DATA}/wiki-tickets.csv"
-CHECK_TICKETS_CSV = "#{DATA}/check-tickets.csv"
+# Define directories
+DATA_DIR = output_dir_confluence(ASSEMBLA_SPACE)
+IMAGES_DIR = "#{DATA_DIR}/images"
+DOCUMENTS_DIR = "#{DATA_DIR}/documents"
+
+# Define locations of CSV files
+LINKS_CSV = "#{DATA_DIR}/links.csv"
+UPLOADED_IMAGES_CSV = "#{DATA_DIR}/uploaded-images.csv"
+UPLOADED_DOCUMENTS_CSV = "#{DATA_DIR}/uploaded-documents.csv"
+CREATED_PAGES_CSV = "#{DATA_DIR}/created-pages.csv"
+CREATED_PAGES_NOK_CSV = "#{DATA_DIR}/created-pages-nok.csv"
+UPDATED_PAGES_CSV = "#{DATA_DIR}/updated-pages.csv"
+WIKI_FIXED_CSV = "#{DATA_DIR}/wiki-pages-fixed.csv"
+WIKI_DOCUMENTS_CSV = "#{DATA_DIR}/wiki-documents.csv"
+WIKI_TICKETS_CSV = "#{DATA_DIR}/wiki-tickets.csv"
+CHECK_TICKETS_CSV = "#{DATA_DIR}/check-tickets.csv"
 
 # Display environment
 puts
-puts "DEBUG:    : '#{DEBUG}'"
-puts "DATA      : '#{DATA}'"
-puts "IMAGES    : '#{IMAGES}'"
-puts "DOCUMENTS : '#{DOCUMENTS}'"
-puts "WIKI      : '#{WIKI}'"
-puts "WIKI_NAME : '#{WIKI_NAME}'"
-puts "API       : '#{API}'"
-puts "SPACE     : '#{SPACE}'"
-puts "EMAIL     : '#{EMAIL}'"
+puts "DEBUG:        : '#{DEBUG}'"
+puts "WIKI          : '#{WIKI}'"
+puts "WIKI_NAME     : '#{WIKI_NAME}'"
+puts "API           : '#{API}'"
+puts "SPACE         : '#{SPACE}'"
+puts "EMAIL         : '#{EMAIL}'"
+puts
+puts "DATA_DIR      : '#{DATA_DIR}'"
+puts "IMAGES_DIR    : '#{IMAGES_DIR}'"
+puts "DOCUMENTS_DIR : '#{DOCUMENTS_DIR}'"
 puts
 
 # Create directories if not already present
-[DATA, IMAGES, DOCUMENTS].each { |dir| Dir.mkdir(dir) unless File.exist?(dir) }
+[DATA_DIR, IMAGES_DIR, DOCUMENTS_DIR].each { |dir| Dir.mkdir(dir) unless File.exist?(dir) }
 
 # Authentication header
 base64_admin = Base64.strict_encode64(JIRA_API_ADMIN_EMAIL + ':' + JIRA_API_KEY).gsub(/\n/, '')
