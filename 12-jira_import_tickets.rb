@@ -311,7 +311,7 @@ def create_ticket_jira(ticket, counter, total)
         payload[:fields]["#{@customfield_name_to_id[k]}".to_sym] = {}
         payload[:fields]["#{@customfield_name_to_id[k]}".to_sym][:id] = id
       else
-        warning("Unknown custom field title='#{k}', value='#{value}' => SKIP")
+        warning("Unknown custom field type='#{type}' title='#{k}', value='#{value}' => SKIP")
         next
       end
     elsif type == 'Team List'
