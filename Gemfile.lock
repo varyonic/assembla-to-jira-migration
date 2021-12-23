@@ -44,9 +44,3 @@ DEPENDENCIES
   i18n
   rest-client
   rubocop
-
-RUBY VERSION
-   ruby 2.4.1p111
-
-BUNDLED WITH
-   1.16.6
