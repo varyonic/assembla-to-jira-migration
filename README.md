@@ -55,6 +55,16 @@ Don't worry, if you read all of the instructions below, follow them carefully wi
 
 Need help? Look [here](https://github.com/kgish/assembla-to-jira-migration#support).
 
+
+## Donation
+
+I have created this toolset in the spirit of open source. This means that everyone is free to use it as is, and any code modifications need to be reported back to me via pull requests.
+
+Much time has been spent by me along with late night evening bouts of sweat and tears in order to reach this point and assure pretty good quality.
+
+If you would like to express your thanks more generously, then donations will be greatly appreciated, half of which I will pass on to charity.
+
+
 ## Installation
 
 The toolset has been written with the [Ruby programming language](https://www.ruby-lang.org). In order to be able to use it, you will have to have downloaded and installed the following items on your computer:
