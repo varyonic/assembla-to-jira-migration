@@ -27,7 +27,7 @@ def jira_activate_user(user, active)
   end
 end
 
-@jira_administrators = jira_get_group(JIRA_API_ADMIN_GROUP)
+@jira_administrators = jira_get_group(JIRA_API_ADMINS_GROUP)
 
 # name,key,accountId,emailAddress,displayName,active
 jira_get_all_users.each do |user|
