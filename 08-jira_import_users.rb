@@ -61,14 +61,14 @@ puts unless MANGLE_EXTERNAL_EMAILS
 # the `site-admins` and the `jira-administrators` groups.
 #
 # accountId,displayName,active,accountType
-@jira_administrators = jira_get_group('jira-administrators')
+@jira_administrators = jira_get_group(JIRA_API_ADMIN_GROUP)
 admin_administrator = @jira_administrators.detect { |user| user['accountId'] == JIRA_API_ADMIN_ACCOUNT_ID }
 
 @jira_site_admins = jira_get_group('site-admins')
 admin_site_admin = @jira_site_admins.detect { |user| user['accountId'] == JIRA_API_ADMIN_ACCOUNT_ID }
 
 # You may have to uncomment out the following line to get things working
-goodbye("Admin user with JIRA_API_ADMIN_ACCOUNT_ID='#{JIRA_API_ADMIN_ACCOUNT_ID}' does NOT exist or does NOT belong to both the 'jira-administrators' and the 'site-admins' groups.") unless admin_site_admin && admin_administrator
+goodbye("Admin user with JIRA_API_ADMIN_ACCOUNT_ID='#{JIRA_API_ADMIN_ACCOUNT_ID}' does NOT exist or does NOT belong to both the JIRA_API_ADMIN_GROUP and the 'site-admins' groups.") unless admin_site_admin && admin_administrator
 
 # You may have to uncomment out the following line to get things working
 goodbye("Admin user with JIRA_API_ADMIN_ACCOUNT_ID='#{JIRA_API_ADMIN_ACCOUNT_ID}' is NOT active, please activate user.") unless admin_site_admin['active'] && admin_administrator['active']
