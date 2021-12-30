@@ -50,7 +50,7 @@ JIRA_API_KEY = ENV['JIRA_API_KEY'].freeze
 JIRA_API_ADMIN_ACCOUNT_ID = ENV['JIRA_API_ADMIN_ACCOUNT_ID'].freeze
 JIRA_API_ADMIN_EMAIL = ENV['JIRA_API_ADMIN_EMAIL'].freeze
 JIRA_API_DEFAULT_EMAIL = (ENV['JIRA_API_DEFAULT_EMAIL'] || 'example.org').gsub(/^@/, '').freeze
-JIRA_API_UNKNOWN_USER = ENV['JIRA_API_UNKNOWN_USER'].freeze
+JIRA_API_UNKNOWN_USER = (ENV['JIRA_API_UNKNOWN_USER'] || 'unknown.user').freeze
 JIRA_API_LEAD_ACCOUNT_ID = ENV['JIRA_API_LEAD_ACCOUNT_ID'].freeze
 
 JIRA_API_IMAGES_THUMBNAIL = (ENV['JIRA_API_IMAGES_THUMBNAIL'] || 'description:false,comments:true').freeze
@@ -100,6 +100,7 @@ BITBUCKET_REPO_TABLE = ENV['BITBUCKET_REPO_TABLE']
 BITBUCKET_REPO_CONVERSIONS = ENV['BITBUCKET_REPO_CONVERSIONS'] || 'data/bitbucket-repo-conversions.csv'
 
 # Mangle external emails not ending with the following suffixes, concerting to lowercase.
+MANGLE_EXTERNAL_EMAILS = ENV['MANGLE_EXTERNAL_EMAILS'] == 'true'
 MANGLE_EXTERNAL_EMAILS_NOT = (ENV['MANGLE_EXTERNAL_EMAILS_NOT'] || '').split(',').map(&:downcase)
 MANGLE_EXTERNAL_EMAILS_NOT_IGNORE = (ENV['MANGLE_EXTERNAL_EMAILS_NOT_IGNORE'] || '').split(',').map(&:downcase)
 

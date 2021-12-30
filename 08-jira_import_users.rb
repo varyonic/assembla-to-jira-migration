@@ -32,25 +32,30 @@ def mangle_email(email)
 end
 
 puts
-if MANGLE_EXTERNAL_EMAILS_NOT.count.zero?
-  puts "MANGLE_EXTERNAL_EMAILS_NOT = '#{MANGLE_EXTERNAL_EMAILS_NOT}' is empty"
-end
-
-puts "MANGLE_EXTERNAL_EMAILS_NOT = '#{MANGLE_EXTERNAL_EMAILS_NOT}'"
-MANGLE_EXTERNAL_EMAILS_NOT.each do |suffix|
-  puts "* #{suffix}"
-end
-
-puts
-if MANGLE_EXTERNAL_EMAILS_NOT_IGNORE.count.zero?
-  puts "MANGLE_EXTERNAL_EMAILS_NOT_IGNORE = '#{MANGLE_EXTERNAL_EMAILS_NOT_IGNORE}' is empty (no emails will be ignored)"
-else
-  puts "MANGLE_EXTERNAL_EMAILS_NOT_IGNORE = '#{MANGLE_EXTERNAL_EMAILS_NOT_IGNORE}'"
-  MANGLE_EXTERNAL_EMAILS_NOT_IGNORE.each do |email|
-    puts "* #{email}"
+puts "MANGLE_EXTERNAL_EMAILS = '#{MANGLE_EXTERNAL_EMAILS}'"
+if MANGLE_EXTERNAL_EMAILS
+  if MANGLE_EXTERNAL_EMAILS_NOT.count.zero?
+    puts "MANGLE_EXTERNAL_EMAILS_NOT = '#{MANGLE_EXTERNAL_EMAILS_NOT}' is empty"
   end
+
+  puts "MANGLE_EXTERNAL_EMAILS_NOT = '#{MANGLE_EXTERNAL_EMAILS_NOT}'"
+  MANGLE_EXTERNAL_EMAILS_NOT.each do |suffix|
+    puts "* #{suffix}"
+  end
+
+  puts
+  if MANGLE_EXTERNAL_EMAILS_NOT_IGNORE.count.zero?
+    puts "MANGLE_EXTERNAL_EMAILS_NOT_IGNORE = '#{MANGLE_EXTERNAL_EMAILS_NOT_IGNORE}' is empty (no emails will be ignored)"
+  else
+    puts "MANGLE_EXTERNAL_EMAILS_NOT_IGNORE = '#{MANGLE_EXTERNAL_EMAILS_NOT_IGNORE}'"
+    MANGLE_EXTERNAL_EMAILS_NOT_IGNORE.each do |email|
+      puts "* #{email}"
+    end
+  end
+  puts
 end
-puts
+
+puts unless MANGLE_EXTERNAL_EMAILS
 
 # IMPORTANT: Make sure that the `JIRA_API_ADMIN_USER` exists, is activated and belongs to both
 # the `site-admins` and the `jira-administrators` groups.
@@ -83,7 +88,7 @@ puts
 # @existing_users_jira = jira_get_users
 
 # accountId,displayName,active,accountType
-@all_users_jira = jira_get_all_users.select{ |user| user['accountType'] == 'atlassian'}
+@all_users_jira = jira_get_all_users.select { |user| user['accountType'] == 'atlassian' }
 
 @unknown_users_jira = @all_users_jira.select { |c| c['displayName'].match?(/^Unknown #\d+$/) }.sort do |a, b|
   a['displayName'].match(/^Unknown #(\d+)$/)[1].to_i <=> b['displayName'].match(/^Unknown #(\d+)$/)[1].to_i
@@ -139,11 +144,13 @@ puts
     # can access the project as usual.
     # puts "email='#{email}'"
     suffix_with_at = '@' + email.split('@')[1]
-    unless MANGLE_EXTERNAL_EMAILS_NOT.include?(suffix_with_at.downcase)
-      email_mangled = mangle_email(email)
-      if email_mangled != user['email']
-        puts "*** Mangled user email: #{user['email']} => #{email_mangled}"
-        user['email'] = email_mangled
+    if MANGLE_EXTERNAL_EMAILS
+      unless MANGLE_EXTERNAL_EMAILS_NOT.include?(suffix_with_at.downcase)
+        email_mangled = mangle_email(email)
+        if email_mangled != user['email']
+          puts "*** Mangled user email: #{user['email']} => #{email_mangled}"
+          user['email'] = email_mangled
+        end
       end
     end
     @users_create << { 'assemblaId': user['id'], 'assemblaName': user['name'], 'assemblaLogin': user['login'], 'emailAddress': user['email'] }
