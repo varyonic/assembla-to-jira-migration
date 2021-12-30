@@ -238,32 +238,32 @@ def create_ticket_jira(ticket, counter, total)
     #  Admin > Issues > Screens > Configure screen > 'PROJECT_KEY: Scrum Default Issue Screen'
     # Assembla
 
-    "#{@customfield_name_to_id['Assembla-Id']}": ticket_number,
-    "#{@customfield_name_to_id['Assembla-Created-On']}": date_format_datetime(created_on),
-    "#{@customfield_name_to_id['Assembla-Due-Date']}": date_format_datetime(due_date),
-    "#{@customfield_name_to_id['Assembla-Reporter']}": reporter_name,
-    "#{@customfield_name_to_id['Assembla-Assignee']}": assignee_name,
-    "#{@customfield_name_to_id['Assembla-Status']}": status_name,
-    "#{@customfield_name_to_id['Assembla-Milestone']}": @nr_milestones.nonzero? ? milestone[:name] : nil,
-    "#{@customfield_name_to_id['Assembla-Completed']}": date_format_datetime(completed_date)
+    'Assembla-Id' => ticket_number,
+    'Assembla-Created-On' => date_format_datetime(created_on),
+    'Assembla-Due-Date' => date_format_datetime(due_date),
+    'Assembla-Reporter' => reporter_name,
+    'Assembla-Assignee' => assignee_name,
+    'Assembla-Status' => status_name,
+    'Assembla-Milestone' => @nr_milestones.nonzero? ? milestone[:name] : nil,
+    'Assembla-Completed' => date_format_datetime(completed_date)
   }
 
   # Assembla-Estimate => 0=None, 1=Small, 3=Medium, 7=Large
   jira_size = assembla_estimate_to_jira_size(estimate)
-  fields["#{@customfield_name_to_id['Assembla-Estimate']}".to_sym] = jira_size
+  fields['Assembla-Estimate'] = jira_size
 
   # Assembla-Worked => hrs
   if assembla_worked.to_i != 0
-    fields["#{@customfield_name_to_id['Assembla-Worked']}".to_sym] = assembla_worked
+    fields['Assembla-Worked'] = assembla_worked
   end
 
   # Assembla-Remaining => hrs
   if assembla_remaining.to_i != 0
-    fields["#{@customfield_name_to_id['Assembla-Remaining']}".to_sym] = assembla_remaining
+    fields['Assembla-Remaining'] = assembla_remaining
   end
 
   if JIRA_SERVER_TYPE == 'hosted'
-    fields["#{@customfield_name_to_id['Rank']}".to_sym] = story_rank
+    fields['Rank'] = story_rank
   end
 
   # Reporter is required
@@ -305,8 +305,7 @@ def create_ticket_jira(ticket, counter, total)
     if %w[List Checkbox].include?(type)
       id = jira_get_list_option_id(k, v)
       if id
-        fields["#{@customfield_name_to_id[k]}".to_sym] = {}
-        fields["#{@customfield_name_to_id[k]}".to_sym][:id] = id
+        fields[k] = { id: id }
       else
         warning("Unknown custom field type='#{type}' title='#{k}', value='#{value}' => SKIP")
         next
@@ -318,8 +317,7 @@ def create_ticket_jira(ticket, counter, total)
       elsif @inactive_jira_users.include?(user_name)
         warning("Inactive jira user='#{user_name}' for 'Team List' field title='#{k}' => SKIP")
       else
-        fields["#{@customfield_name_to_id[k]}".to_sym] = {}
-        fields["#{@customfield_name_to_id[k]}".to_sym][:name] = user_name
+        fields[k.to_sym] = { name: user_name }
       end
     elsif type == 'Date Time'
       # Assembla custom fields of type "Date Time" have format: "YYYY-MM-DD hh:mm:ss" but they need to be
@@ -332,9 +330,9 @@ def create_ticket_jira(ticket, counter, total)
         value = "#{value}:00"
         value = value.sub(' ', 'T') + '.000Z'
       end
-      fields["#{@customfield_name_to_id[k]}".to_sym] = value
+      fields[k] = value
     else
-      fields["#{@customfield_name_to_id[k]}".to_sym] = value
+      fields[k] = value
     end
     # puts "#{counter}: type='#{type}', key='#{k}', value='#{value}'"
   end
@@ -342,9 +340,9 @@ def create_ticket_jira(ticket, counter, total)
   case issue_type[:name]
   when 'epic'
     epic_name = (summary =~ /^epic: /i ? summary[6..-1] : summary)
-    fields["#{@customfield_name_to_id['Epic Name']}".to_sym] = epic_name
+    fields['Epic Name'] = epic_name
   when 'story'
-    fields["#{@customfield_name_to_id['Story Points']}".to_sym] = story_points.to_i unless story_points == '0'
+    fields['Story Points'] = story_points.to_i unless story_points == '0'
   when 'sub-task'
     parent_issue = get_parent_issue(ticket)
     unless parent_issue.nil?
@@ -358,7 +356,10 @@ def create_ticket_jira(ticket, counter, total)
   ok = false
   retries = 0
   begin
-    payload = { create: {}, fields: fields }
+    fields_payload = @customfield_name_to_id.each_with_object(fields.compact) do |(name, id), h|
+      h[id.to_sym] = h.delete(name) if h[name] # transform_keys
+    end
+    payload = { create: {}, fields: fields_payload }
     response = RestClient::Request.execute(method: :post, url: URL_JIRA_ISSUES, payload: payload.to_json, headers: JIRA_HEADERS_ADMIN)
     body = JSON.parse(response.body)
     jira_ticket_id = body['id']
@@ -406,7 +407,7 @@ def create_ticket_jira(ticket, counter, total)
         when 'assignee'
           case reason
           when /cannot be assigned issues/i
-            # fields["#{@customfield_name_to_id['Assembla-Assignee']}".to_sym] = fields[:assignee][:name]
+            # fields['Assembla-Assignee'] = fields[:assignee][:name]
             fields[:assignee][:id] = JIRA_API_LEAD_ACCOUNT_ID
             puts "Cannot be assigned issues: #{assignee_name}, changed to JIRA_API_LEAD_ACCOUNT_ID='#{JIRA_API_LEAD_ACCOUNT_ID}'"
             @cannot_be_assigned_issues << assignee_name unless @cannot_be_assigned_issues.include?(assignee_name)
@@ -419,7 +420,7 @@ def create_ticket_jira(ticket, counter, total)
             puts "Removed reporter '#{reporter_name}' from issue"
             recover = true
           when /is not a user/i
-            fields["#{@customfield_name_to_id['Assembla-Reporter']}".to_sym] = fields[:reporter][:name]
+            fields['Assembla-Reporter'] = fields[:reporter][:name]
             # fields[:reporter][:name] = JIRA_API_UNKNOWN_USER
             fields[:reporter][:id] = JIRA_API_LEAD_ACCOUNT_ID
             puts "Is not a user: #{reporter_name}"
