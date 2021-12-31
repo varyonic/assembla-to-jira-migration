@@ -192,7 +192,8 @@ An example configuration file `.env.example` is provided for you to define a num
 ```
 # --- General settings --- #
 DATA_DIR=data
-TICKETS_CREATED_ON=YYYY-MM-DD
+# Only include Assembla tickets which have been created on or after the following date, disabled by default.
+#TICKETS_CREATED_ON=YYYY-MM-DD
 DEBUG=false
 
 # --- Assembla settings --- #
@@ -210,7 +211,8 @@ ASSEMBLA_WIKI_NAME="Assembla Wiki Name"
 #ASSEMBLA_SKIP_ASSOCIATIONS=parent,child,story,subtask
 # Ticket types extracted from ticket summary, e.g. starting with 'Spike: '
 ASSEMBLA_TYPES_EXTRA=spike,bug
-# 0: All Tickets, 1: Active Tickets, order by milestone, 4: Closed Tickets, order by milestone, personal reports start with "u"
+# 0: All Tickets, 1: Active Tickets, order by milestone, 4: Closed Tickets, order by milestone, personal reports
+# start with "u"
 ASSEMBLA_TICKET_REPORT=0
 ASSEMBLA_TIMEZONE=+0100
 
@@ -234,6 +236,9 @@ JIRA_API_ADMIN_ACCOUNT_ID=account-id
 JIRA_API_LEAD_ACCOUNT_ID=account-id
 JIRA_API_ADMIN_PASSWORD=secret
 JIRA_API_ADMIN_EMAIL=john.doe@example.org
+# IMPORTANT: Previously 'jira-administrators' was the default admin group name, but since this has changed recently
+# to 'jira-admins-[:company-name`, the following extra parameter has been added as workaround.
+JIRA_API_ADMINS_GROUP=jira-admins-[:company-name]
 JIRA_API_UNKNOWN_USER=unknown.user
 JIRA_API_DEFAULT_EMAIL=@example.org
 JIRA_API_IMAGES_THUMBNAIL=description:false,comments:true
@@ -249,26 +254,33 @@ JIRA_API_SKIP_EMPTY_COMMENTS=true
 JIRA_API_SKIP_COMMIT_COMMENTS=true
 
 # If JIRA_API_SKIP_COMMIT_COMMENTS is false, use BitBucket table for translations of assembla links to bitbucket repos.
-# Important: the placeholder '[[REPO-NAME]]' must NOT be removed/changed, it is used for inserting the repository name. The ':company' field should be replaced with the company path.
+# Important: the placeholder '[[REPO-NAME]]' must NOT be removed/changed, it is used for inserting the repository name.
+# The ':company' field should be replaced with the company path.
 BITBUCKET_REPO_URL='https://bitbucket.org/[:company-path]/[[REPO-NAME]]/commits'
 BITBUCKET_REPO_TABLE=from_repos1|to_repos1,from_repos2|to_repos2,...,from_reposn|to_reposn
 # Or you can provide a csv file to read in with the following columns titles:
 # Assembla Space Key,Assembla Space Name,Assembla Repo Name,BitBucket Repo Name,Bitbucket Repo URL,Assembla Repo URL
+# Experimental so use with some caution.
 BITBUCKET_REPO_CONVERSIONS=data/bitbucket-repo-conversions.csv
 
 # Mangle external emails not ending with the following suffixes, (must start with a '@') comment line in order to disable.
 # Important: this needs to be restored after the migration so that the user can access the project as usual.
+# Set the following line to 'true' if you want to enable email mangling, default is false.
+MANGLE_EXTERNAL_EMAILS=false
 MANGLE_EXTERNAL_EMAILS_NOT=@company1.com,@company2.com,bedrijf1.nl
-MANGLE_EXTERNAL_EMAILS_NOT_IGNORE=me@gmail.com,joe.doh@hello.nl
+MANGLE_EXTERNAL_EMAILS_NOT_IGNORE=me@gmail.com,john.doe@hello.nl
 
 # Cross project ticket linking
-JIRA_API_SPACE_TO_PROJECT=assembla-space1-name:project1-key,assembla-space2-name:project2-key,...,assembla-spaceb-name:projectn-key
+JIRA_API_SPACE_TO_PROJECT=assembla-space1-name:project1-key,assembla-space2-name:project2-key,...
 
 JIRA_API_RE_TICKET=https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+)(?:\-[^)\]]+)?(?:\?.*\b)?
 JIRA_API_RE_COMMENT=https?://.*?\.assembla\.com/spaces/(.*?)/tickets/(\d+).*?\?comment=(\d+)(?:#comment:\d+)?
 JIRA_API_BROWSE_ISSUE=browse/[:jira-ticket-key]
 JIRA_API_BROWSE_COMMENT=browse/[:jira-ticket-key]?focusedCommentId=[:jira-comment-id]
-JIRA_API_STATUSES="New:To Do,In Progress,Blocked,Testable,Ready for Acceptance,In Acceptance Testing,Ready for Deploy,Done,Invalid:Done"
+
+# Convert the Assembla ticket statuses to the equivalient Jira issue status (from:to) or just keep (from)
+# Important: make sure that the new issue statuses have been added to the workflow.
+JIRA_API_STATUSES="New:To Do,In Progress,Blocked,Testable,In Acceptance Testing,Ready for Deploy,Done,Invalid:Done"
 
 # --- Jira Agile settings --- #
 JIRA_AGILE_HOST=rest/agile/1.0
@@ -277,7 +289,7 @@ JIRA_AGILE_HOST=rest/agile/1.0
 CONFLUENCE_API=https://[:company-name].atlassian.net/wiki/rest/api
 CONFLUENCE_SPACE=space-key
 CONFLUENCE_API_KEY=secret
-CONFLUENCE_EMAIL=kiffin.gish@planet.nl
+CONFLUENCE_EMAIL=john.doe@example.org
 CONFLUENCE_PASSWORD=secret
 ```
 
@@ -522,6 +534,34 @@ NOTE: Initially the users are created with the `password` equal to their usernam
 
 IMPORTANT: At the end of the import you may be given a warning that certain users need to activate before continuing. Do NOT forget to do this as later actions requiring these users may fail.
 
+#### Mangle external user emails
+
+By default, new users will be sent a notification email inviting them to join the Jira project. For external users you may not want this to happen. As at the time of this writing there does not seem
+to be a reliable API flag to disbale this, the mangle option was created as a workaround.
+
+Given the company email suffix, any users not belonging to the this email suffix can have there emails mangled so that the 'adapted' email will not arrive. Once the migration is complete, you
+can restore the original emails for these users.
+
+By default, emails are not tampered with.
+
+An example:
+
+```
+# Mangling of certain external emails been enabled. 
+MANGLE_EXTERNAL_EMAILS=true
+MANGLE_EXTERNAL_EMAILS_NOT=@company1.com,@company2.com
+MANGLE_EXTERNAL_EMAILS_NOT_IGNORE=me@gmail.com,john.doe@hello.nl
+```
+
+If a given email doesn't end with `@company1.com` or `@company2.com` then it will be mangled.
+
+The email `john.doe@example.org` will be converted to `joe.doez@zexample.org`.
+
+The email `mary.jane@company1.com` will NOT be mangled.
+
+The email `me@gmail.com` will also NOT be mangled although it is an external email.
+
+
 ### Download attachments
 
 Before the attachments can be imported, they must first be downloaded to a local directory after which they can be imported into Jira.
@@ -638,12 +678,12 @@ Assembla allows the use of a number of user-defined field types, namely: `List`,
 These need to be mapped properly to the relevant Jira custom fields implemented as Jira plugins `com.atlassian.jira.plugin.system.customfieldtypes:<type>`
 as follows:
 
-| Assembla type | Jira plugin <type> | Searcher key
-| ------------- | ------------------ | ------------
-| List          | select             | multiselectsearcher
-| Team List     | userpicker         | userpickergroupsearcher
-| Numeric       | float              | exactnumber
-| Text          | textfield          | textsearcher
+| Assembla type | Jira plugin <type> | Searcher key            |
+|---------------|--------------------|-------------------------|
+| List          | select             | multiselectsearcher     |
+| Team List     | userpicker         | userpickergroupsearcher |
+| Numeric       | float              | exactnumber             |
+| Text          | textfield          | textsearcher            |
 
 ```
 POST /rest/api/2/screens/{screenId}/tabs/{tabId}/fields
@@ -1028,6 +1068,20 @@ Experimental. For links that refer to COMMITS, we have:
 @re_commit = %r{https?://.*?\.assembla\.com/spaces/(.*?)/git/commits/([a-z0-9]+)}
 
 # => https://bitbucket.org/[:company-name]/[[REPO-NAME]]/commits/[:commit_hash]'
+```
+
+If the environment variable `JIRA_API_SKIP_COMMIT_COMMENTS` is set to false, then a BitBucket table can be used for 
+converting Assembla commit links to bitbucket repos.
+
+```
+BITBUCKET_REPO_URL='https://bitbucket.org/[:company-path]/[[REPO-NAME]]/commits'
+BITBUCKET_REPO_TABLE=from_repos1|to_repos1,from_repos2|to_repos2,...,from_reposn|to_reposn
+```
+Rather than pasting all the `from|to` combinations, for long lists it may be more feasible to load a csv-file instead.
+
+```
+# Assembla Space Key,Assembla Space Name,Assembla Repo Name,BitBucket Repo Name,Bitbucket Repo URL,Assembla Repo URL
+BITBUCKET_REPO_CONVERSIONS=data/bitbucket-repo-conversions.csv
 ```
 
 This script should be used carefully as it will cause irreversible updates. Check it out first to make sure that it is executing
