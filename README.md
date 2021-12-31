@@ -237,7 +237,7 @@ JIRA_API_LEAD_ACCOUNT_ID=account-id
 JIRA_API_ADMIN_PASSWORD=secret
 JIRA_API_ADMIN_EMAIL=john.doe@example.org
 # IMPORTANT: Previously 'jira-administrators' was the default admin group name, but since this has changed recently
-# to 'jira-admins-[:company-name`, the following extra parameter has been added as workaround.
+# to 'jira-admins-[:company-name]`, the following extra parameter has been added as workaround.
 JIRA_API_ADMINS_GROUP=jira-admins-[:company-name]
 JIRA_API_UNKNOWN_USER=unknown.user
 JIRA_API_DEFAULT_EMAIL=@example.org
@@ -415,6 +415,13 @@ $ tail -f logs/nn.log
 ## Import data into Jira
 
 You can run the import in a number of stages, output files being generated at each point in the process.
+
+IMPORTANT: Previously `jira-administrators` was the default admin group name, but since this has changed recently
+to `jira-admins-[:company-name]`, the following extra parameter has been added to the .env-file as a workaround:
+
+```
+JIRA_API_ADMINS_GROUP=jira-admins-[:company-name]
+```
 
 ### Create project (and board)
 
