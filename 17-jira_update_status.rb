@@ -288,7 +288,7 @@ first_id = @tickets_assembla.first['id']
 goodbye('Cannot find first_id') unless first_id
 
 issue_id = @assembla_id_to_jira[first_id]
-goodbye("Cannot find issue_id, first_id='#{first_id}'") unless first_id
+goodbye("Cannot find issue_id, first_id='#{first_id}'") unless issue_id
 
 @transitions = jira_get_transitions(issue_id)
 goodbye("No transitions available, first_id='#{first_id}', issue_id=#{issue_id}") unless @transitions && @transitions
